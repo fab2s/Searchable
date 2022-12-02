@@ -1,0 +1,61 @@
+{
+    "name": "fab2s/searchable",
+    "description": "Laravel searchable models based on FullText indexes",
+    "type": "library",
+    "authors": [{
+        "name": "Fabrice de Stefanis"
+    }],
+    "support": {
+        "issues": "https://github.com/fab2s/Searchable/issues",
+        "source": "https://github.com/fab2s/Searchable"
+    },
+    "keywords": [
+        "Laravel",
+        "Searchable",
+        "FullText",
+        "model"
+    ],
+    "license": [
+        "MIT"
+    ],
+    "require": {
+        "php": "^8.0",
+        "mysql": "*",
+        "fab2s/strings": "^1.0"
+    },
+    "require-dev": {
+        "ext-pdo": "*",
+        "phpunit/phpunit": "^9.0",
+        "orchestra/testbench": "^7.0",
+        "friendsofphp/php-cs-fixer": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "fab2s\\Searchable\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "fab2s\\Searchable\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "fab2s\\Searchable\\SearchableServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "post-update-cmd": [
+            "rm -f .*.cache"
+        ],
+        "post-install-cmd": [
+            "rm -f .*.cache"
+        ],
+        "fix": "php-cs-fixer fix --config=./.php-cs-fixer.dist.php -vvv",
+        "post-autoload-dump": [
+            "@php vendor/bin/testbench package:discover --ansi"
+        ]
+    }
+}
