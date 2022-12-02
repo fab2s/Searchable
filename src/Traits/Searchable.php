@@ -48,17 +48,24 @@ trait Searchable
     {
         return TermParser::prepareSearchable(array_map(function ($field) {
             return $this->$field;
-        }, $this->searchableFields), $additional);
+        }, $this->getSearchables()), $additional);
     }
 
-    public static function bootSearchable()
+    public static function bootSearchable():void
     {
         static::retrieved(function (Model $model) {
+            /** @var Searchable $model */
             $model->makeHidden($model->getSearchableField());
         });
 
         static::saving(function (Model $model) {
+            /** @var Searchable $model */
             $model->{$model->getSearchableField()} = $model->getSearchableContent();
         });
+    }
+
+    public function getSearchables(): array
+    {
+        return $this->searchables ?? [];
     }
 }

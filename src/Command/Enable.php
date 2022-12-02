@@ -70,7 +70,7 @@ class Enable extends Command
             if (in_array(Searchable::class, class_uses_recursive($fqn), true)) {
                 $this->output->info("Processing $fqn");
                 $foundSome = true;
-                /** @var Model $instance */
+                /** @var Model&Searchable $instance */
                 $instance        = new $fqn;
                 $searchableField = $instance->getSearchableField();
                 $table           = $instance->getTable();
@@ -120,10 +120,11 @@ class Enable extends Command
      */
     protected function index(Model $instance)
     {
+        /** @var Searchable $instance */
         $searchableField = $instance->getSearchableField();
         $this->output->progressStart();
         foreach ($instance->lazy() as $record) {
-            /* @var  Model $record */
+            /* @var  Model&Searchable $record */
             $record->{$searchableField} = $record->getSearchableContent();
             $record->save();
             $this->output->progressAdvance();

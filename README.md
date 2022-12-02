@@ -16,7 +16,7 @@ composer require "fab2s/searchable"
 
 ## Usage
 
-To start using `Searchable` on a specific `model`, just `use`  the `Searchable` trait and setup `$searchableFields`:
+To start using `Searchable` on a specific `model`, just `use`  the `Searchable` trait and setup `$searchables`:
 
 ```php
 class MyModel extends Model
@@ -26,7 +26,7 @@ class MyModel extends Model
      /**
      * @var string[]
      */
-    protected $searchableFields = [
+    protected $searchables = [
         'field1',
         'field2',
         // ...
@@ -78,7 +78,7 @@ You can customise concatenation as well overriding:
     {
         return TermParser::prepareSearchable(array_map(function ($field) {
             return $this->$field;
-        }, $this->searchableFields), $additional);
+        }, $this->getSearchables()), $additional);
     }
 ````
 
@@ -132,3 +132,12 @@ php artisan searchable:stopwords
 ````
 
 The db server configuration must be configured as demonstrated in [innodb_full_text.cnf](./src/innodb_full_text.cnf) for these words to effectively be excluded from indexing.
+
+
+## Contributing
+
+Contributions are welcome, do not hesitate to open issues and submit pull requests.
+
+## License
+
+`Searchable` is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT).
