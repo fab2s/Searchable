@@ -12,6 +12,7 @@
     "keywords": [
         "Laravel",
         "Searchable",
+        "mysql",
         "FullText",
         "model"
     ],
@@ -20,7 +21,6 @@
     ],
     "require": {
         "php": "^8.0",
-        "mysql": "*",
         "fab2s/strings": "^1.0"
     },
     "require-dev": {

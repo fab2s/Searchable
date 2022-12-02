@@ -9,13 +9,13 @@
 
 namespace fab2s\Searchable;
 
-use fab2s\Searchable\Commands\Enable;
-use fab2s\Searchable\Commands\StopWords;
+use fab2s\Searchable\Command\Enable;
+use fab2s\Searchable\Command\StopWords;
 use Illuminate\Support\ServiceProvider;
 
 class SearchableServiceProvider extends ServiceProvider
 {
-    protected $commands = [
+    protected array $commands = [
         StopWords::class,
         Enable::class,
     ];

@@ -1,3 +1,134 @@
 # Searchable
 
-Searchable models for [**Laravel**](https://laravel.com/) (The Awesome) based on Mysql FullText indexes
+Searchable models for [**Laravel**](https://laravel.com/) (The Awesome) based on Mysql FullText indexes.
+
+This package does not try to be smart, just KISS. It will allow you to make any filed of your model searchable by concatenating them into a new column indexed with a mysql FullText index.
+
+> It requires mysql / mariadb and Laravel 9.x
+
+## Installation
+
+`Searchable` can be installed using composer:
+
+```shell
+composer require "fab2s/searchable"
+```
+
+## Usage
+
+To start using `Searchable` on a specific `model`, just `use`  the `Searchable` trait and setup `$searchableFields`:
+
+```php
+class MyModel extends Model
+{
+    use Searchable;
+    
+     /**
+     * @var string[]
+     */
+    protected $searchableFields = [
+        'field1',
+        'field2',
+        // ...
+        'fieldN',
+    ];
+}
+```
+
+By default, `field1` to `fieldN` will be concatenated and stored into the default `SearchQuery::SEARCHABLE_FIELD` field added to the model by the `Enable` command.
+
+By default, this searchable field will be of type `VARCHAR(255)`, but you can customize it at will with any type and length supporting a FullText index by just overriding the `Searchable` trait method in your model:
+
+````php
+    /**
+     * @return string
+     */
+    public function getSearchableField(): string
+    {
+        return SearchQuery::SEARCHABLE_FIELD; // searchable
+    }
+
+    /**
+     * @return string any migration method such as string, text etc ...
+     */
+    public function getSearchableFieldDbType(): string
+    {
+        return 'string';
+    }
+
+    /**
+     * @return int
+     */
+    public function getSearchableFieldDbSize(): int
+    {
+        return 255;
+    }
+
+````
+
+You can customise concatenation as well overriding:
+
+````php
+    /**
+     * @param string $additional for case where this method is overridden in users
+     *
+     * @return string
+     */
+    public function getSearchableContent(string $additional = ''): string
+    {
+        return TermParser::prepareSearchable(array_map(function ($field) {
+            return $this->$field;
+        }, $this->searchableFields), $additional);
+    }
+````
+
+The `$additional` parameter can be used to preprocess model data if needed, can be handy to encrypt/decrypt or anonymize for example:
+
+````php
+    /**
+     * @return string
+     */
+    public function getSearchableContent(): string
+    {
+        $additional = [
+            $this->decrypt('additional_field1'),
+            0 . substr((string) $this->decrypt('phone'), 3, 6), // will allow for partial matches
+        ];
+
+        return $this->getSearchableContentTrait(implode(' ', $additional));
+    }
+````
+
+Once you have configured your model(s), you can use the `Enable` command to add the `searchable` field to your models and / or index them:
+
+````shell
+$ php artisan searchable:enable --help
+Description:
+  Enable searchable for your models
+
+Usage:
+  searchable:enable [options]
+
+Options:
+      --root[=ROOT]     The place where to start looking for models, defaults to Laravel's app/Models
+      --index           To also index / re index
+  -h, --help            Display help for the given command. When no command is given display help for the list command
+  -q, --quiet           Do not output any message
+  -V, --version         Display this application version
+      --ansi|--no-ansi  Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction  Do not ask any interactive question
+      --env[=ENV]       The environment the command should run under
+  -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+````
+
+## Stopwords
+
+`Searchable` comes with an english and french stop words files which you can use to reduce FullText indexing by ignoring words listed in [these files](./src/stopwords).
+
+The `StopWords` command can be used to populate a `stopwords` table with these words:
+
+````shell
+php artisan searchable:stopwords
+````
+
+The db server configuration must be configured as demonstrated in [innodb_full_text.cnf](./src/innodb_full_text.cnf) for these words to effectively be excluded from indexing.

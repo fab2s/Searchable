@@ -7,7 +7,7 @@
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
 
-namespace fab2s\Searchable\Commands;
+namespace fab2s\Searchable\Command;
 
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
@@ -54,6 +54,7 @@ class StopWords extends Command
                 $table->string('value', 32);
             });
         }
+
         $this->output->info('Empty ' . self::STOP_WORDS_TABLE);
         DB::table(self::STOP_WORDS_TABLE)->truncate();
         $this->output->info('Populate ' . self::STOP_WORDS_TABLE);
@@ -92,6 +93,7 @@ class StopWords extends Command
             if ($file->getExtension() !== 'txt') {
                 continue;
             }
+
             foreach ($fs->lines($file->getRealPath()) as $word) {
                 yield trim($word);
             }

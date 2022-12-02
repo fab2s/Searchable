@@ -7,7 +7,7 @@
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
 
-namespace fab2s\Searchable\Commands;
+namespace fab2s\Searchable\Command;
 
 use fab2s\Searchable\Traits\Searchable;
 use Illuminate\Console\Command;

@@ -24,7 +24,7 @@ trait Searchable
     }
 
     /**
-     * @return string
+     * @return string any migration method such as string, text etc ...
      */
     public function getSearchableFieldDbType(): string
     {
