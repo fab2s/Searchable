@@ -53,13 +53,18 @@ trait Searchable
 
     public static function bootSearchable():void
     {
+        static::creating(function (Model $model) {
+            /* @var Searchable $model */
+            $model->makeHidden($model->getSearchableField());
+        });
+
         static::retrieved(function (Model $model) {
-            /** @var Searchable $model */
+            /* @var Searchable $model */
             $model->makeHidden($model->getSearchableField());
         });
 
         static::saving(function (Model $model) {
-            /** @var Searchable $model */
+            /* @var Searchable $model */
             $model->{$model->getSearchableField()} = $model->getSearchableContent();
         });
     }
