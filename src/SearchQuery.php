@@ -38,12 +38,12 @@ class SearchQuery
     }
 
     /**
-     * @param Builder     $query
-     * @param string      $search
-     * @param string      $tableAlias
-     * @param string|null $order
+     * @param Builder                  $query
+     * @param string|array<int,string> $search
+     * @param string                   $tableAlias
+     * @param string|null              $order
      */
-    public function addMatch(Builder $query, string $search, string $tableAlias = '', ?string $order = null)
+    public function addMatch(Builder $query, string|array $search, string $tableAlias = '', ?string $order = null): void
     {
         $terms = TermParser::parse($search);
         if (empty($terms)) {

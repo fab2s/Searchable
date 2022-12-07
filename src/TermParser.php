@@ -14,7 +14,12 @@ use fab2s\Utf8\Utf8;
 
 class TermParser
 {
-    public static function parse(string $search): string
+    /**
+     * @param string|array<int,string> $search
+     *
+     * @return string
+     */
+    public static function parse(string|array $search): string
     {
         return implode(' ', array_map(function ($value) {
             return $value ? $value . '*' : '';
@@ -22,12 +27,16 @@ class TermParser
     }
 
     /**
-     * @param string $search
+     * @param string|array<int, string> $search
      *
      * @return string
      */
-    public static function filter(string $search): string
+    public static function filter(string|array $search): string
     {
+        if (is_array($search)) {
+            $search = str_replace('Array', '', implode(' ', array_filter($search)));
+        }
+
         $search = trim(preg_replace([
             // drop operator (+, -, > <, ( ), ~, *, ", @distance)
             // and some punctuation
@@ -39,11 +48,11 @@ class TermParser
     }
 
     /**
-     * @param ...string[]|string $input
+     * @param string|array ...$input
      *
      * @return string
      */
-    public static function prepareSearchable(...$input): string
+    public static function prepareSearchable(string|array ...$input): string
     {
         $input  = is_string($input) ? func_get_args() : $input;
         $result = [];
@@ -51,6 +60,6 @@ class TermParser
             $result = array_merge($result, (array) $value);
         }
 
-        return static::filter(implode(' ', array_filter(array_map('trim', $result))));
+        return static::filter($result);
     }
 }
