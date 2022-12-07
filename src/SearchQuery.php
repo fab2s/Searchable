@@ -16,11 +16,6 @@ class SearchQuery
     const SEARCHABLE_FIELD = 'searchable';
 
     /**
-     * @var string
-     */
-    protected $mode = TermParser::MODE_SINGLE;
-
-    /**
      * @var string|null
      */
     protected $order;
@@ -33,13 +28,11 @@ class SearchQuery
     /**
      * Search constructor.
      *
-     * @param string      $mode
      * @param string|null $order
      * @param string      $searchableField
      */
-    public function __construct(string $mode = TermParser::MODE_SINGLE, ?string $order = 'DESC', string $searchableField = self::SEARCHABLE_FIELD)
+    public function __construct(?string $order = 'DESC', string $searchableField = self::SEARCHABLE_FIELD)
     {
-        $this->mode            = $mode;
         $this->order           = $this->getOrder($order);
         $this->searchableField = $searchableField;
     }
@@ -47,12 +40,12 @@ class SearchQuery
     /**
      * @param Builder     $query
      * @param string      $search
-     * @param string|null $mode
+     * @param string      $tableAlias
      * @param string|null $order
      */
-    public function addMatch(Builder $query, string $search, string $tableAlias = '', ?string $mode = null, ?string $order = null)
+    public function addMatch(Builder $query, string $search, string $tableAlias = '', ?string $order = null)
     {
-        $terms = TermParser::parse($search, $mode);
+        $terms = TermParser::parse($search);
         if (empty($terms)) {
             return;
         }

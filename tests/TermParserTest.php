@@ -17,12 +17,11 @@ class TermParserTest extends TestCase
      * @dataProvider parseProvider
      *
      * @param string $input
-     * @param string $mode
      * @param string $expected
      */
-    public function testParse(string $input, string $mode, string $expected)
+    public function testParse(string $input, string $expected)
     {
-        $this->assertSame($expected, TermParser::parse($input, $mode));
+        $this->assertSame($expected, TermParser::parse($input));
     }
 
     public function parseProvider(): array
@@ -30,12 +29,10 @@ class TermParserTest extends TestCase
         return [
             'single_single' => [
                 'term',
-                TermParser::MODE_SINGLE,
                 'term*',
             ],
             'single_multiple' => [
                 'term',
-                TermParser::MODE_MULTIPLE,
                 'term*',
             ],
         ];

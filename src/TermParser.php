@@ -14,22 +14,11 @@ use fab2s\Utf8\Utf8;
 
 class TermParser
 {
-    const MODE_SINGLE   = 'single';
-    const MODE_MULTIPLE = 'multiple';
-
-    public static function parse(string $search, ?string $mode = self::MODE_SINGLE): string
+    public static function parse(string $search): string
     {
-        $search = static::filter($search);
-
-        switch ($mode) {
-            case self::MODE_MULTIPLE:
-                return implode(' ', array_map(function ($value) {
-                    $value .= '*';
-                }, explode(' ', $search)));
-            case self::MODE_SINGLE:
-            default:
-                return $search . '*';
-        }
+        return implode(' ', array_map(function ($value) {
+            return $value ? $value . '*' : '';
+        }, explode(' ', static::filter($search))));
     }
 
     /**
