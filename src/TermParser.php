@@ -14,15 +14,24 @@ use fab2s\Utf8\Utf8;
 
 class TermParser
 {
+    const MATCH_LEFT                = 'left';
+    const MATCH_RIGHT               = 'right';
+    const MATCH_BOTH                = 'both';
+    protected static $matchingTypes = [
+        self::MATCH_LEFT  => '*%1$s',
+        self::MATCH_RIGHT => '%1$s*',
+        self::MATCH_BOTH  => '*%1$s*',
+    ];
+
     /**
      * @param string|array<int,string> $search
      *
      * @return string
      */
-    public static function parse(string|array $search): string
+    public static function parse(string|array $search, string $matchType = self::MATCH_RIGHT): string
     {
-        return implode(' ', array_map(function ($value) {
-            return $value ? $value . '*' : '';
+        return implode(' ', array_map(function ($value) use ($matchType) {
+            return static::getMatch($value, $matchType);
         }, explode(' ', static::filter($search))));
     }
 
@@ -61,5 +70,10 @@ class TermParser
         }
 
         return static::filter($result);
+    }
+
+    protected static function getMatch(string $value, string $matchType): string
+    {
+        return $value ? sprintf(self::$matchingTypes[$matchType] ?? self::$matchingTypes[self::MATCH_RIGHT], $value) : '';
     }
 }

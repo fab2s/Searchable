@@ -9,6 +9,7 @@
 
 namespace fab2s\Searchable;
 
+use fab2s\Searchable\Traits\Searchable;
 use Illuminate\Database\Eloquent\Builder;
 
 class SearchQuery
@@ -45,12 +46,14 @@ class SearchQuery
      */
     public function addMatch(Builder $query, string|array $search, string $tableAlias = '', ?string $order = null): void
     {
-        $terms = TermParser::parse($search);
+        /** @var Searchable $model */
+        $model = $query->getModel();
+        $terms = TermParser::parse($search, $model->getMatchingType());
         if (empty($terms)) {
             return;
         }
 
-        $searchField  = ($tableAlias ? "$tableAlias." : '') . $this->searchableField;
+        $searchField = ($tableAlias ? "$tableAlias." : '') . $this->searchableField;
         $query->whereRaw('MATCH (' . $searchField . ') AGAINST (? IN BOOLEAN MODE)', [$terms]);
         $order = $order ? $this->getOrder($order) : $this->order;
 

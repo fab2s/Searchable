@@ -73,4 +73,12 @@ trait Searchable
     {
         return $this->searchables ?? [];
     }
+
+    /**
+     * @return string one of TermParser::MATCH_RIGHT, TermParser::MATCH_LEFT, TermParser::MATCH_BOTH
+     */
+    public function getMatchingType() : string
+    {
+        return TermParser::MATCH_RIGHT;
+    }
 }
