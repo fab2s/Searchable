@@ -1,8 +1,8 @@
 <?php
 
 /*
- * This file is part of Searchable
- *     (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
+ * This file is part of fab2s/searchable.
+ * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
  * This source file is licensed under the MIT license which you will
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
@@ -15,9 +15,6 @@ use Illuminate\Database\Eloquent\Model;
 
 trait Searchable
 {
-    /**
-     * @return string
-     */
     public function getSearchableField(): string
     {
         return SearchQuery::SEARCHABLE_FIELD;
@@ -31,9 +28,6 @@ trait Searchable
         return 'string';
     }
 
-    /**
-     * @return int
-     */
     public function getSearchableFieldDbSize(): int
     {
         return 255;
@@ -41,8 +35,6 @@ trait Searchable
 
     /**
      * @param string $additional for case where this method is overridden in users
-     *
-     * @return string
      */
     public function getSearchableContent(string $additional = ''): string
     {
@@ -51,7 +43,7 @@ trait Searchable
         }, $this->getSearchables()), $additional);
     }
 
-    public static function bootSearchable():void
+    public static function bootSearchable(): void
     {
         static::creating(function (Model $model) {
             /* @var Searchable $model */

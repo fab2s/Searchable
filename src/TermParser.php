@@ -1,8 +1,8 @@
 <?php
 
 /*
- * This file is part of Searchable
- *     (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
+ * This file is part of fab2s/searchable.
+ * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
  * This source file is licensed under the MIT license which you will
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
@@ -16,8 +16,6 @@ class TermParser
 {
     /**
      * @param string|array<int,string> $search
-     *
-     * @return string
      */
     public static function parse(string|array $search): string
     {
@@ -28,8 +26,6 @@ class TermParser
 
     /**
      * @param string|array<int, string> $search
-     *
-     * @return string
      */
     public static function filter(string|array $search): string
     {
@@ -41,20 +37,14 @@ class TermParser
             // drop operator (+, -, > <, ( ), ~, *, ", @distance)
             // and some punctuation
             '`[+\-><\(\)~*\"@,.:;?!]+`',
-            //'`[+\-><\(\)~*\",.:;?!]+`',
+            // '`[+\-><\(\)~*\",.:;?!]+`',
         ], ' ', Strings::singleLineIze(Strings::normalizeText($search))));
 
-        return preg_replace('`\s{2,}`', ' ', Utf8::strtolower(Strings::singleWsIze($search, true)));
+        return Utf8::strtolower(preg_replace('`\s{2,}`', ' ', $search));
     }
 
-    /**
-     * @param string|array ...$input
-     *
-     * @return string
-     */
     public static function prepareSearchable(string|array ...$input): string
     {
-        $input  = is_string($input) ? func_get_args() : $input;
         $result = [];
         foreach ($input as $value) {
             $result = array_merge($result, (array) $value);

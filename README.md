@@ -1,4 +1,5 @@
 # Searchable
+[![CI](https://github.com/fab2s/Searchable/actions/workflows/ci.yml/badge.svg)](https://github.com/fab2s/Searchable/actions/workflows/ci.yml) [![QA](https://github.com/fab2s/Searchable/actions/workflows/qa.yml/badge.svg)](https://github.com/fab2s/Searchable/actions/workflows/qa.yml) [![Latest Stable Version](http://poser.pugx.org/fab2s/Searchable/v)](https://packagist.org/packages/fab2s/Searchable) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com) [![License](http://poser.pugx.org/fab2s/Searchable/license)](https://packagist.org/packages/fab2s/Searchable) 
 
 Searchable models for [**Laravel**](https://laravel.com/) (The Awesome) based on Mysql FullText indexes.
 
@@ -92,7 +93,10 @@ The `$additional` parameter can be used to preprocess model data if needed, can 
     {
         $additional = [
             $this->decrypt('additional_field1'),
-            0 . substr((string) $this->decrypt('phone'), 3, 6), // will allow for partial matches
+            // assuming E.164 format:
+            // +33601010101 would be indexed by its 0601010 prefix only,
+            // allowing for decent autocomplete narrowing and privacy
+            0 . substr((string) $this->decrypt('phone'), 3, 6), 
         ];
 
         return $this->getSearchableContentTrait(implode(' ', $additional));
@@ -123,7 +127,7 @@ Options:
 
 ## Stopwords
 
-`Searchable` comes with an english and french stop words files which you can use to reduce FullText indexing by ignoring words listed in [these files](./src/stopwords).
+`Searchable` comes with an English and French stop words files which you can use to reduce FullText indexing by ignoring words listed in [these files](./src/stopwords).
 
 The `StopWords` command can be used to populate a `stopwords` table with these words:
 
@@ -133,6 +137,9 @@ php artisan searchable:stopwords
 
 The db server configuration must be configured as demonstrated in [innodb_full_text.cnf](./src/innodb_full_text.cnf) for these words to effectively be excluded from indexing.
 
+## Requirements
+
+`Searchable` is tested against php 8.1, 8.2, 8.3 and 8.4
 
 ## Contributing
 
