@@ -1,17 +1,18 @@
 <?php
 
 /*
- * This file is part of Searchable
- *     (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
+ * This file is part of fab2s/laravel-dt0.
+ * (c) Fabrice de Stefanis / https://github.com/fab2s/laravel-dt0
  * This source file is licensed under the MIT license which you will
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
 
 namespace fab2s\Searchable\Tests;
 
+use fab2s\Searchable\SearchableInterface;
 use fab2s\Searchable\Traits\Searchable;
 
-class Model extends \Illuminate\Database\Eloquent\Model
+class Model extends \Illuminate\Database\Eloquent\Model implements SearchableInterface
 {
     use Searchable;
     protected $guarded     = [];
@@ -20,9 +21,6 @@ class Model extends \Illuminate\Database\Eloquent\Model
         'field2',
     ];
 
-    /**
-     * @return int
-     */
     public function getSearchableFieldDbSize(): int
     {
         return 500;

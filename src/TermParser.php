@@ -1,8 +1,8 @@
 <?php
 
 /*
- * This file is part of Searchable
- *     (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
+ * This file is part of fab2s/laravel-dt0.
+ * (c) Fabrice de Stefanis / https://github.com/fab2s/laravel-dt0
  * This source file is licensed under the MIT license which you will
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
@@ -16,20 +16,28 @@ class TermParser
 {
     /**
      * @param string|array<int,string> $search
-     *
-     * @return string
      */
-    public static function parse(string|array $search): string
+    public static function parse(string|array $search, string $driver = 'mysql', bool $phonetic = false): string
     {
+        $filtered = static::filter($search);
+
+        if ($phonetic) {
+            $filtered = static::phoneticize($filtered);
+        }
+
+        if ($driver === 'pgsql') {
+            return implode(' & ', array_filter(array_map(function ($value) {
+                return $value !== '' ? $value . ':*' : '';
+            }, explode(' ', $filtered))));
+        }
+
         return implode(' ', array_map(function ($value) {
-            return $value ? $value . '*' : '';
-        }, explode(' ', static::filter($search))));
+            return $value !== '' ? $value . '*' : '';
+        }, explode(' ', $filtered)));
     }
 
     /**
      * @param string|array<int, string> $search
-     *
-     * @return string
      */
     public static function filter(string|array $search): string
     {
@@ -37,24 +45,35 @@ class TermParser
             $search = str_replace('Array', '', implode(' ', array_filter($search)));
         }
 
-        $search = trim(preg_replace([
+        $search = trim((string) preg_replace([
             // drop operator (+, -, > <, ( ), ~, *, ", @distance)
             // and some punctuation
-            '`[+\-><\(\)~*\"@,.:;?!]+`',
-            //'`[+\-><\(\)~*\",.:;?!]+`',
+            '`[+\-><\(\)~*\"@,.:;?!&|]+`',
+            // '`[+\-><\(\)~*\",.:;?!]+`',
         ], ' ', Strings::singleLineIze(Strings::normalizeText($search))));
 
-        return preg_replace('`\s{2,}`', ' ', Utf8::strtolower(Strings::singleWsIze($search, true)));
+        return (string) preg_replace('`\s{2,}`', ' ', Utf8::strtolower(Strings::singleWsIze($search, true)));
+    }
+
+    public static function phoneticize(string $filtered): string
+    {
+        $words = array_filter(explode(' ', $filtered), fn (string $word) => $word !== '');
+        $codes = [];
+        foreach ($words as $word) {
+            $code = metaphone($word);
+            if ($code !== '') {
+                $codes[] = strtolower($code);
+            }
+        }
+
+        return $codes ? $filtered . ' ' . implode(' ', $codes) : $filtered;
     }
 
     /**
-     * @param string|array ...$input
-     *
-     * @return string
+     * @param string|array<string> ...$input
      */
     public static function prepareSearchable(string|array ...$input): string
     {
-        $input  = is_string($input) ? func_get_args() : $input;
         $result = [];
         foreach ($input as $value) {
             $result = array_merge($result, (array) $value);

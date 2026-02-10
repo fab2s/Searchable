@@ -1,143 +1,166 @@
 # Searchable
 
-Searchable models for [**Laravel**](https://laravel.com/) (The Awesome) based on Mysql FullText indexes.
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat)](https://phpstan.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-This package does not try to be smart, just KISS. It will allow you to make any filed of your model searchable by concatenating them into a new column indexed with a mysql FullText index.
+Fulltext search for [Laravel](https://laravel.com/) Eloquent models. Supports **MySQL** and **PostgreSQL**.
 
-> It requires mysql / mariadb and Laravel 9.x
+This package keeps things simple: it concatenates model fields into a single indexed column and uses native fulltext capabilities (`MATCH...AGAINST` on MySQL, `tsvector/tsquery` on PostgreSQL) for fast prefix-based search, ideal for autocomplete.
+
+## Requirements
+
+- PHP 8.1+
+- Laravel 10.x / 11.x / 12.x
+- MySQL / MariaDB or PostgreSQL
 
 ## Installation
 
-`Searchable` can be installed using composer:
-
 ```shell
-composer require "fab2s/searchable"
+composer require fab2s/searchable
 ```
 
-## Usage
+The service provider is auto-discovered.
 
-To start using `Searchable` on a specific `model`, just `use`  the `Searchable` trait and setup `$searchables`:
+## Quick start
+
+Implement `SearchableInterface` on your model, use the `Searchable` trait, and list the fields to index:
 
 ```php
-class MyModel extends Model
+use fab2s\Searchable\SearchableInterface;
+use fab2s\Searchable\Traits\Searchable;
+
+class Contact extends Model implements SearchableInterface
 {
     use Searchable;
-    
-     /**
-     * @var string[]
-     */
+
     protected $searchables = [
-        'field1',
-        'field2',
-        // ...
-        'fieldN',
+        'first_name',
+        'last_name',
+        'email',
     ];
 }
 ```
 
-By default, `field1` to `fieldN` will be concatenated and stored into the default `SearchQuery::SEARCHABLE_FIELD` field added to the model by the `Enable` command.
+Then run the artisan command to add the column and fulltext index:
 
-By default, this searchable field will be of type `VARCHAR(255)`, but you can customize it at will with any type and length supporting a FullText index by just overriding the `Searchable` trait method in your model:
+```shell
+php artisan searchable:enable
+```
 
-````php
-    /**
-     * @return string
-     */
-    public function getSearchableField(): string
-    {
-        return SearchQuery::SEARCHABLE_FIELD; // searchable
-    }
+That's it. The `searchable` column is automatically populated on every save.
 
-    /**
-     * @return string any migration method such as string, text etc ...
-     */
-    public function getSearchableFieldDbType(): string
-    {
-        return 'string';
-    }
+## Searching
 
-    /**
-     * @return int
-     */
-    public function getSearchableFieldDbSize(): int
-    {
-        return 255;
-    }
+Use `SearchQuery` to add a fulltext clause to any Eloquent query:
 
-````
+```php
+use fab2s\Searchable\SearchQuery;
 
-You can customise concatenation as well overriding:
+$search = new SearchQuery;
+$query  = Contact::query();
 
-````php
-    /**
-     * @param string $additional for case where this method is overridden in users
-     *
-     * @return string
-     */
-    public function getSearchableContent(string $additional = ''): string
-    {
-        return TermParser::prepareSearchable(array_map(function ($field) {
-            return $this->$field;
-        }, $this->getSearchables()), $additional);
-    }
-````
+$search->addMatch($query, $request->input('q'));
 
-The `$additional` parameter can be used to preprocess model data if needed, can be handy to encrypt/decrypt or anonymize for example:
+$results = $query->get();
+```
 
-````php
-    /**
-     * @return string
-     */
-    public function getSearchableContent(): string
-    {
-        $additional = [
-            $this->decrypt('additional_field1'),
-            0 . substr((string) $this->decrypt('phone'), 3, 6), // will allow for partial matches
-        ];
+The driver is detected automatically from the query's connection. Results are ordered by relevance by default (pass `null` as the first constructor argument to disable).
 
-        return $this->getSearchableContentTrait(implode(' ', $additional));
-    }
-````
+## Configuration
 
-Once you have configured your model(s), you can use the `Enable` command to add the `searchable` field to your models and / or index them:
+### Column type and size
 
-````shell
-$ php artisan searchable:enable --help
-Description:
-  Enable searchable for your models
+Override trait methods to customize the searchable column:
 
-Usage:
-  searchable:enable [options]
+```php
+public function getSearchableFieldDbType(): string
+{
+    return 'text'; // default: 'string'
+}
 
-Options:
-      --root[=ROOT]     The place where to start looking for models, defaults to Laravel's app/Models
-      --index           To also index / re index
-  -h, --help            Display help for the given command. When no command is given display help for the list command
-  -q, --quiet           Do not output any message
-  -V, --version         Display this application version
-      --ansi|--no-ansi  Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction  Do not ask any interactive question
-      --env[=ENV]       The environment the command should run under
-  -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
-````
+public function getSearchableFieldDbSize(): int
+{
+    return 1000; // default: 255
+}
+```
 
-## Stopwords
+### Custom content
 
-`Searchable` comes with an english and french stop words files which you can use to reduce FullText indexing by ignoring words listed in [these files](./src/stopwords).
+Override `getSearchableContent()` to control what gets indexed. The `$additional` parameter lets you inject extra data (decrypted fields, computed values, etc.):
 
-The `StopWords` command can be used to populate a `stopwords` table with these words:
+```php
+public function getSearchableContent(string $additional = ''): string
+{
+    $extra = implode(' ', [
+        $this->decrypt('phone'),
+        $this->some_computed_value,
+    ]);
 
-````shell
-php artisan searchable:stopwords
-````
+    return parent::getSearchableContent($extra);
+}
+```
 
-The db server configuration must be configured as demonstrated in [innodb_full_text.cnf](./src/innodb_full_text.cnf) for these words to effectively be excluded from indexing.
+### PostgreSQL text search configuration
 
+By default, PostgreSQL uses the `english` text search configuration. Override to change it:
+
+```php
+public function getSearchableTsConfig(): string
+{
+    return 'french';
+}
+```
+
+Pass the same value to `SearchQuery` when querying:
+
+```php
+$search = new SearchQuery('DESC', 'searchable', 'french');
+```
+
+### Phonetic matching
+
+Enable phonetic matching to find results despite spelling variations (eg. "jon" matches "john", "smyth" matches "smith"). This uses PHP's `metaphone()` to append phonetic codes to the same searchable field — no extra column or extension needed.
+
+```php
+public function getSearchablePhonetic(): bool
+{
+    return true;
+}
+```
+
+Then enable it on the search side too:
+
+```php
+$search = new SearchQuery('DESC', 'searchable', 'english', phonetic: true);
+```
+
+Stored content becomes `john smith jn sm0`, and a search for `jon` produces the term `jn` which matches.
+
+## The Enable command
+
+```shell
+# Add searchable column + index to all models using the Searchable trait
+php artisan searchable:enable
+
+# Target a specific model
+php artisan searchable:enable --model=App/Models/Contact
+
+# Also (re)index existing records
+php artisan searchable:enable --model=App/Models/Contact --index
+
+# Scan a custom directory for models
+php artisan searchable:enable --root=app/Domain/Models
+```
+
+The command detects the database driver and creates the appropriate index:
+- **MySQL**: `ALTER TABLE ... ADD FULLTEXT`
+- **PostgreSQL**: `CREATE INDEX ... USING GIN(to_tsvector(...))`
 
 ## Contributing
 
-Contributions are welcome, do not hesitate to open issues and submit pull requests.
+Contributions are welcome. Feel free to open issues and submit pull requests.
 
 ## License
 
-`Searchable` is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT).
+`Searchable` is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

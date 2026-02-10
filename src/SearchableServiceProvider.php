@@ -1,8 +1,8 @@
 <?php
 
 /*
- * This file is part of Searchable
- *     (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
+ * This file is part of fab2s/laravel-dt0.
+ * (c) Fabrice de Stefanis / https://github.com/fab2s/laravel-dt0
  * This source file is licensed under the MIT license which you will
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
@@ -10,13 +10,13 @@
 namespace fab2s\Searchable;
 
 use fab2s\Searchable\Command\Enable;
-use fab2s\Searchable\Command\StopWords;
+use Illuminate\Console\Command;
 use Illuminate\Support\ServiceProvider;
 
 class SearchableServiceProvider extends ServiceProvider
 {
+    /** @var array<int,class-string<Command>> */
     protected array $commands = [
-        StopWords::class,
         Enable::class,
     ];
 

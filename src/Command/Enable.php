@@ -1,16 +1,17 @@
 <?php
 
 /*
- * This file is part of Searchable
- *     (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
+ * This file is part of fab2s/laravel-dt0.
+ * (c) Fabrice de Stefanis / https://github.com/fab2s/laravel-dt0
  * This source file is licensed under the MIT license which you will
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
 
 namespace fab2s\Searchable\Command;
 
-use fab2s\Searchable\Traits\Searchable;
+use fab2s\Searchable\SearchableInterface;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -35,94 +36,88 @@ class Enable extends Command
      * @var string
      */
     protected $description = 'Enable searchable for your models';
-
-    /**
-     * @var string
-     */
     protected string $modelRootDir;
-
-    /**
-     * @var bool
-     */
     protected bool $index;
     protected string $model;
 
     /**
      * Execute the console command.
-     *
-     * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $this->index        = (bool) $this->option('index');
-        $this->modelRootDir = $this->option('root')  ??  app_path('Models');
-        $this->model        = $this->option('model') ??  '';
+        $root               = $this->option('root');
+        $this->modelRootDir = is_string($root) ? $root : app_path('Models');
+        $model              = $this->option('model');
+        $this->model        = is_string($model) ? $model : '';
 
         if ($this->model) {
             $this->model = str_replace('/', '\\', $this->model);
-            if (!class_exists($this->model)) {
+            if (! class_exists($this->model)) {
                 $this->error('Provided Model FQN not found: ' . $this->model);
 
-                return 1;
+                return self::FAILURE;
             }
 
             $this->handleModel($this->model);
             $this->output->success('Done');
 
-            return 0;
+            return self::SUCCESS;
         }
 
-        if (!is_dir($this->modelRootDir)) {
+        if (! is_dir($this->modelRootDir)) {
             $this->warn('You must specify an existing directory to look for models');
 
-            return 1;
+            return self::FAILURE;
         }
 
         $this->getModelFiles();
         $foundSome = false;
         foreach (get_declared_classes() as $fqn) {
-            $this->handleModel($fqn);
+            if ($this->handleModel($fqn)) {
+                $foundSome = true;
+            }
         }
 
-        if (!$foundSome) {
+        if (! $foundSome) {
             $this->warn('Could not find any model using Searchable trait in ' . $this->modelRootDir);
         } else {
             $this->output->success('Done');
         }
 
-        return 0;
+        return self::SUCCESS;
     }
 
-    public function handleModel(string $fqn): static
+    public function handleModel(string $fqn): bool
     {
-        if (in_array(Searchable::class, class_uses_recursive($fqn), true)) {
-            $this->output->info("Processing $fqn");
-            $foundSome = true;
-            /** @var Model&Searchable $instance */
-            $instance = new $fqn;
-            $this->configureModel($instance);
-
-            if ($this->index) {
-                $this->index($instance);
-            }
+        if (! is_subclass_of($fqn, Model::class) || ! is_subclass_of($fqn, SearchableInterface::class)) {
+            return false;
         }
 
-        return $this;
+        $this->output->info("Processing $fqn");
+        $instance = new $fqn;
+        $this->configureModel($instance);
+
+        if ($this->index) {
+            $this->index($instance);
+        }
+
+        return true;
     }
 
-    protected function configureModel(Model $model): static
+    protected function configureModel(Model&SearchableInterface $model): static
     {
-        /** @var Model&Searchable $model */
         $searchableField = $model->getSearchableField();
         $table           = $model->getTable();
         $connection      = $model->getConnectionName();
         $dbType          = $model->getSearchableFieldDbType();
         $dbSize          = $model->getSearchableFieldDbSize();
+        $driver          = DB::connection($connection)->getDriverName();
 
-        if (!Schema::connection($connection)->hasColumn($table, $searchableField)) {
+        if (! Schema::connection($connection)->hasColumn($table, $searchableField)) {
             $this->output->info("Adding $searchableField to $table");
             $after = null;
-            if ($model->usesTimestamps()) {
+            if ($driver !== 'pgsql' && $model->usesTimestamps()) {
                 $columns = Schema::connection($connection)->getColumnListing($table);
                 $after   = $this->getFirstBeforeAtField($columns);
             }
@@ -138,7 +133,12 @@ class Enable extends Command
             });
 
             $this->output->info('Create full text index');
-            DB::connection($connection)->statement("ALTER TABLE $table ADD FULLTEXT searchable($searchableField)");
+            if ($driver === 'pgsql') {
+                $tsConfig = $model->getSearchableTsConfig();
+                DB::connection($connection)->statement("CREATE INDEX {$table}_{$searchableField}_fulltext ON {$table} USING GIN(to_tsvector('{$tsConfig}', {$searchableField}))");
+            } else {
+                DB::connection($connection)->statement("ALTER TABLE $table ADD FULLTEXT searchable($searchableField)");
+            }
         } else {
             $this->output->info("Found $searchableField in $table");
         }
@@ -146,44 +146,44 @@ class Enable extends Command
         return $this;
     }
 
-    /**
-     * @param Model $instance
-     */
-    protected function index(Model $instance)
+    protected function index(Model&SearchableInterface $instance): void
     {
-        /** @var Searchable $instance */
         $searchableField = $instance->getSearchableField();
         $this->output->info('Indexing: ' . $instance::class);
-        $this->output->progressStart();
-        foreach ($instance->lazy() as $record) {
-            /* @var  Model&Searchable $record */
-            $record->{$searchableField} = $record->getSearchableContent();
-            $record->save();
-            $this->output->progressAdvance();
-        }
+        $this->output->progressStart($instance->count()); // @phpstan-ignore method.notFound
+        // @phpstan-ignore method.notFound
+        $instance->chunkById(
+            1000,
+            function (Collection $chunk) use ($searchableField) {
+                /** @var Collection<int, Model&SearchableInterface> $chunk */
+                $chunk->each(function (Model&SearchableInterface $model) use ($searchableField) {
+                    $model->{$searchableField} = $model->getSearchableContent();
+                    $model->save();
+                });
+
+                $this->output->progressAdvance($chunk->count());
+            },
+        );
 
         $this->output->progressFinish();
     }
 
-    protected function getModelFiles()
+    protected function getModelFiles(): void
     {
         $finder = (new Finder)
             ->files()
             ->in($this->modelRootDir)
             ->name('*.php')
-            ->getIterator();
+            ->getIterator()
+        ;
 
         foreach ($finder as $file) {
             require_once $file->getRealPath();
         }
     }
 
-    /**
-     * @param array $columns
-     *
-     * @return string|null
-     */
-    protected function getFirstBeforeAtField(array $columns): ? string
+    /** @param array<int,string> $columns */
+    protected function getFirstBeforeAtField(array $columns): ?string
     {
         $prev = null;
         foreach ($columns as $column) {

@@ -1,4 +1,6 @@
 /vendor
 .*.cache
+.phpstan
 composer.lock
 .env
+/cov

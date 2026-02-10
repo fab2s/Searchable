@@ -1,6 +1,0 @@
-# Full text indexes
-innodb_ft_min_token_size = 2
-innodb_ft_max_token_size = 32
-innodb_ft_enable_stopword = ON
-# need to set the db here
-innodb_ft_server_stopword_table = database/stop_words
