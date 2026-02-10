@@ -1,5 +1,7 @@
 # Searchable
 
+[![CI](https://github.com/fab2s/Searchable/actions/workflows/ci.yml/badge.svg)](https://github.com/fab2s/Searchable/actions/workflows/ci.yml)
+[![QA](https://github.com/fab2s/Searchable/actions/workflows/qa.yml/badge.svg)](https://github.com/fab2s/Searchable/actions/workflows/qa.yml)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat)](https://phpstan.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -160,6 +162,23 @@ The command detects the database driver and creates the appropriate index:
 ## Contributing
 
 Contributions are welcome. Feel free to open issues and submit pull requests.
+
+```shell
+# fix code style
+composer fix
+
+# run tests
+composer test
+
+# run tests with coverage
+composer cov
+
+# static analysis (src, level 9)
+composer stan
+
+# static analysis (tests, level 5)
+composer stan-tests
+```
 
 ## License
 
