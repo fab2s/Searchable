@@ -11,7 +11,11 @@ namespace fab2s\Searchable\Tests;
 
 use fab2s\Searchable\SearchableInterface;
 use fab2s\Searchable\Traits\Searchable;
+use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * @method static Builder<static> search(string|array $search, ?string $order = 'DESC')
+ */
 class Model extends \Illuminate\Database\Eloquent\Model implements SearchableInterface
 {
     use Searchable;

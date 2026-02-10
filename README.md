@@ -52,22 +52,55 @@ php artisan searchable:enable
 
 That's it. The `searchable` column is automatically populated on every save.
 
+> **Choosing fields wisely:** The quality of matching depends directly on which fields you index. This package is designed for fast, simple autocomplete — not complex full-text search. Keep `$searchables` focused on the few fields users actually type into a search box (names, titles, emails). Adding large or numerous fields dilutes relevance and increases storage. If you need weighted fields, facets, or advanced ranking, consider a dedicated search engine instead.
+
 ## Searching
 
-Use `SearchQuery` to add a fulltext clause to any Eloquent query:
+The trait provides a `search` scope that handles everything automatically:
+
+```php
+$results = Contact::search($request->input('q'))->get();
+```
+
+It composes with other query builder methods:
+
+```php
+$results = Contact::search('john')
+    ->where('active', true)
+    ->limit(10)
+    ->get();
+```
+
+Results are ordered by relevance (DESC) by default. Pass `null` to disable:
+
+```php
+$results = Contact::search('john', null)->latest()->get();
+```
+
+The driver is detected automatically from the query's connection. The scope picks up the model's `tsConfig` and `phonetic` settings.
+
+> For IDE autocompletion, add a `@method` annotation to your model:
+> ```php
+> /**
+>  * @method static Builder<static> search(string|array $search, ?string $order = 'DESC')
+>  */
+> class Contact extends Model implements SearchableInterface
+> ```
+
+### Advanced usage with SearchQuery
+
+For more control (table aliases in joins, custom field name), use `SearchQuery` directly:
 
 ```php
 use fab2s\Searchable\SearchQuery;
 
-$search = new SearchQuery;
+$search = new SearchQuery('DESC', 'searchable', 'english', phonetic: true);
 $query  = Contact::query();
 
-$search->addMatch($query, $request->input('q'));
+$search->addMatch($query, $request->input('q'), 'contacts');
 
 $results = $query->get();
 ```
-
-The driver is detected automatically from the query's connection. Results are ordered by relevance by default (pass `null` as the first constructor argument to disable).
 
 ## Configuration
 
@@ -114,7 +147,7 @@ public function getSearchableTsConfig(): string
 }
 ```
 
-Pass the same value to `SearchQuery` when querying:
+The `search` scope picks this up automatically. When using `SearchQuery` directly, pass the same value:
 
 ```php
 $search = new SearchQuery('DESC', 'searchable', 'french');
@@ -131,13 +164,13 @@ public function getSearchablePhonetic(): bool
 }
 ```
 
-Then enable it on the search side too:
+That's all — both storage and the `search` scope handle it automatically. Stored content becomes `john smith jn sm0`, and a search for `jon` produces the term `jn` which matches.
+
+When using `SearchQuery` directly, pass the phonetic flag:
 
 ```php
 $search = new SearchQuery('DESC', 'searchable', 'english', phonetic: true);
 ```
-
-Stored content becomes `john smith jn sm0`, and a search for `jon` produces the term `jn` which matches.
 
 ## The Enable command
 

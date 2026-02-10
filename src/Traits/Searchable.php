@@ -11,6 +11,7 @@ namespace fab2s\Searchable\Traits;
 
 use fab2s\Searchable\SearchQuery;
 use fab2s\Searchable\TermParser;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 trait Searchable
@@ -49,18 +50,13 @@ trait Searchable
         return $content;
     }
 
+    public function initializeSearchable(): void
+    {
+        $this->makeHidden($this->getSearchableField());
+    }
+
     public static function bootSearchable(): void
     {
-        static::creating(function (Model $model) {
-            /* @var Searchable $model */
-            $model->makeHidden($model->getSearchableField());
-        });
-
-        static::retrieved(function (Model $model) {
-            /* @var Searchable $model */
-            $model->makeHidden($model->getSearchableField());
-        });
-
         static::saving(function (Model $model) {
             /* @var Searchable $model */
             $model->{$model->getSearchableField()} = $model->getSearchableContent();
@@ -80,5 +76,13 @@ trait Searchable
     public function getSearchablePhonetic(): bool
     {
         return false;
+    }
+
+    /** @param Builder<Model> $query */
+    public function scopeSearch(Builder $query, string|array $search, ?string $order = 'DESC'): void
+    {
+        (new SearchQuery($order, $this->getSearchableField(), $this->getSearchableTsConfig(), $this->getSearchablePhonetic()))
+            ->addMatch($query, $search)
+        ;
     }
 }
