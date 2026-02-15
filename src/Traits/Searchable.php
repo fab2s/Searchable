@@ -10,6 +10,7 @@
 namespace fab2s\Searchable\Traits;
 
 use Closure;
+use fab2s\Searchable\Phonetic\PhoneticInterface;
 use fab2s\Searchable\SearchQuery;
 use fab2s\Searchable\TermParser;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,13 +19,13 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @mixin Model
  *
- * @property string                                                     $searchableField
- * @property string                                                     $searchableFieldDbType
- * @property int                                                        $searchableFieldDbSize
- * @property array<string>                                              $searchables
- * @property string                                                     $searchableTsConfig
- * @property bool                                                       $searchablePhonetic
- * @property class-string<\fab2s\Searchable\Phonetic\PhoneticInterface> $searchablePhoneticAlgorithm
+ * @property string                          $searchableField
+ * @property string                          $searchableFieldDbType
+ * @property int                             $searchableFieldDbSize
+ * @property array<string>                   $searchables
+ * @property string                          $searchableTsConfig
+ * @property bool                            $searchablePhonetic
+ * @property class-string<PhoneticInterface> $searchablePhoneticAlgorithm
  */
 trait Searchable
 {
