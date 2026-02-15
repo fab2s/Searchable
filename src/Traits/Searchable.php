@@ -14,11 +14,21 @@ use fab2s\Searchable\TermParser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @mixin Model
+ *
+ * @property string        $searchableField
+ * @property string        $searchableFieldDbType
+ * @property int           $searchableFieldDbSize
+ * @property array<string> $searchables
+ * @property string        $searchableTsConfig
+ * @property bool          $searchablePhonetic
+ */
 trait Searchable
 {
     public function getSearchableField(): string
     {
-        return SearchQuery::SEARCHABLE_FIELD;
+        return $this->searchableField ?? SearchQuery::SEARCHABLE_FIELD;
     }
 
     /**
@@ -26,12 +36,12 @@ trait Searchable
      */
     public function getSearchableFieldDbType(): string
     {
-        return 'string';
+        return $this->searchableFieldDbType ?? 'string';
     }
 
     public function getSearchableFieldDbSize(): int
     {
-        return 255;
+        return $this->searchableFieldDbSize ?? 500;
     }
 
     /**
@@ -70,12 +80,12 @@ trait Searchable
 
     public function getSearchableTsConfig(): string
     {
-        return 'english';
+        return $this->searchableTsConfig ?? 'english';
     }
 
     public function getSearchablePhonetic(): bool
     {
-        return false;
+        return $this->searchablePhonetic ?? false;
     }
 
     /** @param Builder<Model> $query */

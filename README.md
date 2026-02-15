@@ -104,21 +104,30 @@ $results = $query->get();
 
 ## Configuration
 
-### Column type and size
+Every option can be set by declaring a property on your model. The trait picks them up automatically and falls back to sensible defaults when omitted:
 
-Override trait methods to customize the searchable column:
+| Property                | Type           | Default         | Description                              |
+|-------------------------|----------------|-----------------|------------------------------------------|
+| `$searchableField`      | `string`       | `'searchable'`  | Column name for the searchable content   |
+| `$searchableFieldDbType`| `string`       | `'string'`      | Migration column type (`string`, `text`)  |
+| `$searchableFieldDbSize`| `int`          | `500`           | Column size (applies to `string` type)   |
+| `$searchables`          | `array<string>`| `[]`            | Model fields to index                    |
+| `$searchableTsConfig`   | `string`       | `'english'`     | PostgreSQL text search configuration     |
+| `$searchablePhonetic`   | `bool`         | `false`         | Enable phonetic matching                 |
 
 ```php
-public function getSearchableFieldDbType(): string
+class Contact extends Model implements SearchableInterface
 {
-    return 'text'; // default: 'string'
-}
+    use Searchable;
 
-public function getSearchableFieldDbSize(): int
-{
-    return 1000; // default: 255
+    protected array $searchables = ['first_name', 'last_name', 'email'];
+    protected string $searchableTsConfig = 'french';
+    protected bool $searchablePhonetic = true;
+    protected int $searchableFieldDbSize = 1000;
 }
 ```
+
+Each property has a corresponding getter method (`getSearchableField()`, `getSearchableFieldDbType()`, etc.) defined in `SearchableInterface`. You can override those methods instead if you need computed values.
 
 ### Custom content
 
@@ -138,13 +147,10 @@ public function getSearchableContent(string $additional = ''): string
 
 ### PostgreSQL text search configuration
 
-By default, PostgreSQL uses the `english` text search configuration. Override to change it:
+By default, PostgreSQL uses the `english` text search configuration. Set `$searchableTsConfig` to change it:
 
 ```php
-public function getSearchableTsConfig(): string
-{
-    return 'french';
-}
+protected string $searchableTsConfig = 'french';
 ```
 
 The `search` scope picks this up automatically. When using `SearchQuery` directly, pass the same value:
@@ -158,10 +164,7 @@ $search = new SearchQuery('DESC', 'searchable', 'french');
 Enable phonetic matching to find results despite spelling variations (eg. "jon" matches "john", "smyth" matches "smith"). This uses PHP's `metaphone()` to append phonetic codes to the same searchable field — no extra column or extension needed.
 
 ```php
-public function getSearchablePhonetic(): bool
-{
-    return true;
-}
+protected bool $searchablePhonetic = true;
 ```
 
 That's all — both storage and the `search` scope handle it automatically. Stored content becomes `john smith jn sm0`, and a search for `jon` produces the term `jn` which matches.
