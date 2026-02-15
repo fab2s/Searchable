@@ -114,6 +114,7 @@ Every option can be set by declaring a property on your model. The trait picks t
 | `$searchables`          | `array<string>`| `[]`            | Model fields to index                    |
 | `$searchableTsConfig`   | `string`       | `'english'`     | PostgreSQL text search configuration     |
 | `$searchablePhonetic`   | `bool`         | `false`         | Enable phonetic matching                 |
+| `$searchablePhoneticAlgorithm` | `class-string<PhoneticInterface>` | — (metaphone) | Custom phonetic encoder class |
 
 ```php
 class Contact extends Model implements SearchableInterface
@@ -174,6 +175,76 @@ When using `SearchQuery` directly, pass the phonetic flag:
 ```php
 $search = new SearchQuery('DESC', 'searchable', 'english', phonetic: true);
 ```
+
+### Custom phonetic algorithm
+
+The default `metaphone()` works well for English. For other languages, set `$searchablePhoneticAlgorithm` to any class implementing `PhoneticInterface`:
+
+```php
+use fab2s\Searchable\Phonetic\PhoneticInterface;
+
+class MyEncoder implements PhoneticInterface
+{
+    public static function encode(string $word): string
+    {
+        // your encoding logic
+    }
+}
+```
+
+Then reference it on your model:
+
+```php
+use fab2s\Searchable\Phonetic\Phonetic;
+
+class Contact extends Model implements SearchableInterface
+{
+    use Searchable;
+
+    protected array $searchables = ['first_name', 'last_name'];
+    protected bool $searchablePhonetic = true;
+    protected string $searchablePhoneticAlgorithm = Phonetic::class;
+}
+```
+
+The trait resolves the class to a closure internally — no method override needed.
+
+When using `SearchQuery` directly, pass the encoder as a closure:
+
+```php
+$search = new SearchQuery('DESC', 'searchable', 'french', phonetic: true, phoneticAlgorithm: Phonetic::encode(...));
+```
+
+### Built-in French encoders
+
+Two French phonetic algorithms are included, ported from [Talisman](https://github.com/Yomguithereal/talisman) (MIT):
+
+| Class | Algorithm | Description |
+|-------|-----------|-------------|
+| `Phonetic` | [Phonetic Français](http://www.roudoudou.com/phonetic.php) | Comprehensive French phonetic algorithm by Edouard Berge. Handles ligatures, silent letters, nasal vowels, and many French-specific spelling rules. |
+| `Soundex2` | [Soundex2](http://sqlpro.developpez.com/cours/soundex/) | French adaptation of Soundex. Simpler and faster than `Phonetic`, produces 4-character codes. |
+
+Both implement `PhoneticInterface` and handle Unicode normalization (accents, ligatures like œ and æ) internally.
+
+```php
+use fab2s\Searchable\Phonetic\Phonetic;
+use fab2s\Searchable\Phonetic\Soundex2;
+
+Phonetic::encode('jean');   // 'JAN'
+Soundex2::encode('dupont'); // 'DIPN'
+```
+
+### Phonetic encoder benchmarks
+
+Measured on a set of 520 French words, 1000 iterations each (PHP 8.4):
+
+| Encoder    | Per word | Throughput |
+|------------|----------|------------|
+| metaphone  | ~2 µs   | ~500k/s    |
+| Soundex2   | ~35 µs  | ~28k/s     |
+| Phonetic   | ~51 µs  | ~20k/s     |
+
+PHP's native `metaphone()` is a C extension and unsurprisingly the fastest. Both French encoders are pure PHP with extensive regex-based rule sets, yet fast enough for typical use — encoding 1000 words takes under 50ms.
 
 ## The Enable command
 

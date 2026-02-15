@@ -9,6 +9,8 @@
 
 namespace fab2s\Searchable;
 
+use Closure;
+
 interface SearchableInterface
 {
     public function getSearchableField(): string;
@@ -28,4 +30,6 @@ interface SearchableInterface
     public function getSearchableTsConfig(): string;
 
     public function getSearchablePhonetic(): bool;
+
+    public function getSearchablePhoneticClosure(): Closure;
 }

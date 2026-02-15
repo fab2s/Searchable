@@ -9,6 +9,7 @@
 
 namespace fab2s\Searchable\Tests;
 
+use fab2s\Searchable\Phonetic\Phonetic;
 use fab2s\Searchable\TermParser;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -127,7 +128,7 @@ class TermParserTest extends TestCase
     #[DataProvider('phoneticizeProvider')]
     public function test_phoneticize(string $input, string $expected): void
     {
-        $this->assertSame($expected, TermParser::phoneticize($input));
+        $this->assertSame($expected, TermParser::phoneticize($input, metaphone(...)));
     }
 
     public static function phoneticizeProvider(): array
@@ -174,6 +175,26 @@ class TermParserTest extends TestCase
     public function test_parse_pgsql_phonetic_multiple(): void
     {
         $this->assertSame('jon:* & smith:* & jn:* & sm0:*', TermParser::parse('jon smith', 'pgsql', true));
+    }
+
+    public function test_phoneticize_custom_encoder(): void
+    {
+        $this->assertSame('jean jan', TermParser::phoneticize('jean', Phonetic::encode(...)));
+    }
+
+    public function test_phoneticize_custom_encoder_multiple(): void
+    {
+        $this->assertSame('jean dupont jan dupon', TermParser::phoneticize('jean dupont', Phonetic::encode(...)));
+    }
+
+    public function test_parse_mysql_custom_phonetic(): void
+    {
+        $this->assertSame('jean* jan*', TermParser::parse('jean', 'mysql', true, Phonetic::encode(...)));
+    }
+
+    public function test_parse_pgsql_custom_phonetic(): void
+    {
+        $this->assertSame('jean:* & jan:*', TermParser::parse('jean', 'pgsql', true, Phonetic::encode(...)));
     }
 
     #[DataProvider('prepareSearchableProvider')]

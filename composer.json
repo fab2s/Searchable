@@ -20,6 +20,7 @@
         "MIT"
     ],
     "require": {
+        "ext-intl": "*",
         "php": "^8.1",
         "fab2s/strings": "^1.0"
     },

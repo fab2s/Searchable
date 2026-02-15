@@ -9,6 +9,7 @@
 
 namespace fab2s\Searchable\Traits;
 
+use Closure;
 use fab2s\Searchable\SearchQuery;
 use fab2s\Searchable\TermParser;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,12 +18,13 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @mixin Model
  *
- * @property string        $searchableField
- * @property string        $searchableFieldDbType
- * @property int           $searchableFieldDbSize
- * @property array<string> $searchables
- * @property string        $searchableTsConfig
- * @property bool          $searchablePhonetic
+ * @property string                                                     $searchableField
+ * @property string                                                     $searchableFieldDbType
+ * @property int                                                        $searchableFieldDbSize
+ * @property array<string>                                              $searchables
+ * @property string                                                     $searchableTsConfig
+ * @property bool                                                       $searchablePhonetic
+ * @property class-string<\fab2s\Searchable\Phonetic\PhoneticInterface> $searchablePhoneticAlgorithm
  */
 trait Searchable
 {
@@ -54,7 +56,7 @@ trait Searchable
         }, $this->getSearchables()), $additional);
 
         if ($this->getSearchablePhonetic()) {
-            $content = TermParser::phoneticize($content);
+            $content = TermParser::phoneticize($content, $this->getSearchablePhoneticClosure());
         }
 
         return $content;
@@ -88,10 +90,17 @@ trait Searchable
         return $this->searchablePhonetic ?? false;
     }
 
+    public function getSearchablePhoneticClosure(): Closure
+    {
+        return isset($this->searchablePhoneticAlgorithm)
+            ? $this->searchablePhoneticAlgorithm::encode(...)
+            : metaphone(...);
+    }
+
     /** @param Builder<Model> $query */
     public function scopeSearch(Builder $query, string|array $search, ?string $order = 'DESC'): void
     {
-        (new SearchQuery($order, $this->getSearchableField(), $this->getSearchableTsConfig(), $this->getSearchablePhonetic()))
+        (new SearchQuery($order, $this->getSearchableField(), $this->getSearchableTsConfig(), $this->getSearchablePhonetic(), $this->getSearchablePhoneticClosure()))
             ->addMatch($query, $search)
         ;
     }

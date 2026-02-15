@@ -83,6 +83,16 @@ class ModelTest extends TestCase
         $this->assertSame('john smith extra jn sm0 ekstr', $content);
     }
 
+    public function test_get_searchable_content_custom_phonetic(): void
+    {
+        $content = (new PhoneticFrModel)->fill([
+            'field1' => 'Jean',
+            'field2' => 'Dupont',
+        ])->getSearchableContent();
+
+        $this->assertSame('jean dupont jan dupon', $content);
+    }
+
     public function test_boot_searchable(): void
     {
         $this->expectNotToPerformAssertions();

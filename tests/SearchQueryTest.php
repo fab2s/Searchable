@@ -9,6 +9,7 @@
 
 namespace fab2s\Searchable\Tests;
 
+use fab2s\Searchable\Phonetic\Phonetic;
 use fab2s\Searchable\SearchQuery;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -202,5 +203,24 @@ class SearchQueryTest extends TestCase
         $query->search('john'); // @phpstan-ignore method.notFound
 
         $this->assertSame(['john* jn*', 'john* jn*'], $query->getBindings());
+    }
+
+    public function test_add_match_custom_phonetic_mysql(): void
+    {
+        $sq    = new SearchQuery('DESC', SearchQuery::SEARCHABLE_FIELD, 'english', true, Phonetic::encode(...));
+        $query = $this->queryForDriver();
+        $sq->addMatch($query, 'jean');
+
+        $this->assertSame(['jean* jan*', 'jean* jan*'], $query->getBindings());
+    }
+
+    public function test_scope_search_custom_phonetic(): void
+    {
+        $model = new PhoneticFrModel;
+        $model->setConnection('mysql_fake');
+        $query = $model->newQuery();
+        $query->search('jean'); // @phpstan-ignore method.notFound
+
+        $this->assertSame(['jean* jan*', 'jean* jan*'], $query->getBindings());
     }
 }

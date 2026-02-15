@@ -9,6 +9,7 @@
 
 namespace fab2s\Searchable;
 
+use Closure;
 use fab2s\Strings\Strings;
 use fab2s\Utf8\Utf8;
 
@@ -17,12 +18,12 @@ class TermParser
     /**
      * @param string|array<int,string> $search
      */
-    public static function parse(string|array $search, string $driver = 'mysql', bool $phonetic = false): string
+    public static function parse(string|array $search, string $driver = 'mysql', bool $phonetic = false, ?Closure $phoneticAlgorithm = null): string
     {
         $filtered = static::filter($search);
 
         if ($phonetic) {
-            $filtered = static::phoneticize($filtered);
+            $filtered = static::phoneticize($filtered, $phoneticAlgorithm ?? metaphone(...));
         }
 
         if ($driver === 'pgsql') {
@@ -55,12 +56,12 @@ class TermParser
         return (string) preg_replace('`\s{2,}`', ' ', Utf8::strtolower(Strings::singleWsIze($search, true)));
     }
 
-    public static function phoneticize(string $filtered): string
+    public static function phoneticize(string $filtered, Closure $encoder): string
     {
         $words = array_filter(explode(' ', $filtered), fn (string $word) => $word !== '');
         $codes = [];
         foreach ($words as $word) {
-            $code = metaphone($word);
+            $code = $encoder($word);
             if ($code !== '') {
                 $codes[] = strtolower($code);
             }

@@ -9,6 +9,8 @@
 
 namespace fab2s\Searchable\Tests;
 
+use fab2s\Searchable\Phonetic\Phonetic;
+
 class PhoneticModel extends Model
 {
     protected $table = 'models';
@@ -17,4 +19,11 @@ class PhoneticModel extends Model
     {
         return true;
     }
+}
+
+class PhoneticFrModel extends Model
+{
+    protected $table                              = 'models';
+    protected bool $searchablePhonetic            = true;
+    protected string $searchablePhoneticAlgorithm = Phonetic::class;
 }
