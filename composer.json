@@ -1,6 +1,6 @@
 {
     "name": "fab2s/searchable",
-    "description": "Laravel searchable models based on FullText indexes",
+    "description": "Laravel searchable models based on FullText indexes with phonetic matching",
     "type": "library",
     "authors": [{
         "name": "Fabrice de Stefanis"
@@ -13,7 +13,10 @@
         "Laravel",
         "Searchable",
         "mysql",
+        "pgsql",
+        "mariaDb",
         "FullText",
+        "phonetic",
         "model"
     ],
     "license": [
