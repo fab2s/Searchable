@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -543,6 +545,13 @@ class PhoneticTest extends TestCase
             ['couillon', 'KOUILON'],
             ['crotte', 'KROT'],
             ['saumure', 'SOMUR'],
+            // Edge cases for coverage
+            ['tabac', 'TABA'],     // exception match (line 93)
+            ['fuel', 'FIOUL'],     // FUEL special case (line 107)
+            ['eau', 'O'],          // single letter O return (line 112)
+            ['bds', 'BDS'],        // abbreviation: 3+ consecutive consonants (line 119)
+            ['pet', 'PE'],         // simple word: consonant+vowel, 3 chars (lines 124-126)
+            ['le', 'LE'],          // backup code fallback (line 131)
         ];
     }
 

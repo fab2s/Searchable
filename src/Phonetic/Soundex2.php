@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -93,10 +95,6 @@ class Soundex2 implements PhoneticInterface
 
         $normalized = Normalizer::normalize($string, Normalizer::FORM_D);
 
-        if ($normalized !== false) {
-            return (string) preg_replace('~\p{Mn}~u', '', $normalized);
-        }
-
-        return $string;
+        return (string) preg_replace('~\p{Mn}~u', '', (string) $normalized);
     }
 }

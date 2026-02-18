@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -23,7 +25,7 @@ class SearchQuery
     protected Closure $phoneticAlgorithm;
 
     /**
-     * Search constructor.
+     * @param ?Closure(string): string $phoneticAlgorithm
      */
     public function __construct(?string $order = 'DESC', string $searchableField = self::SEARCHABLE_FIELD, string $tsConfig = 'english', bool $phonetic = false, ?Closure $phoneticAlgorithm = null)
     {

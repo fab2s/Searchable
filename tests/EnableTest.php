@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -40,6 +42,12 @@ class EnableTest extends TestCase
             $table->string('searchable', 500)->default('');
             $table->timestamps();
         });
+
+        Schema::create('no_timestamp_models', function (Blueprint $table) {
+            $table->id();
+            $table->string('field1')->default('');
+            $table->string('searchable', 500)->default('');
+        });
     }
 
     /**
@@ -69,6 +77,20 @@ class EnableTest extends TestCase
         $this->artisan('searchable:enable', ['--root' => '/nonexistent/path'])
             ->assertExitCode(1)
         ;
+    }
+
+    public function test_command_scans_directory_no_models_found(): void
+    {
+        $emptyDir = sys_get_temp_dir() . '/searchable_empty_' . uniqid();
+        mkdir($emptyDir);
+
+        try {
+            $this->artisan('searchable:enable', ['--root' => $emptyDir])
+                ->assertExitCode(0)
+            ;
+        } finally {
+            rmdir($emptyDir);
+        }
     }
 
     public function test_configure_model_adds_column(): void
@@ -118,5 +140,31 @@ class EnableTest extends TestCase
         ;
 
         $this->assertSame('john smith jn sm0', DB::table('models')->where('id', 1)->value('searchable'));
+    }
+
+    public function test_command_scans_model_directory(): void
+    {
+        $this->artisan('searchable:enable', ['--root' => __DIR__])
+            ->assertExitCode(0)
+        ;
+    }
+
+    public function test_configure_model_without_timestamps(): void
+    {
+        Schema::drop('no_timestamp_models');
+        Schema::create('no_timestamp_models', function (Blueprint $table) {
+            $table->id();
+            $table->string('field1')->default('');
+        });
+
+        $this->assertFalse(Schema::hasColumn('no_timestamp_models', 'searchable'));
+
+        try {
+            Artisan::call('searchable:enable', ['--model' => NoTimestampModel::class]);
+        } catch (Throwable) {
+            // FULLTEXT index creation is not supported on SQLite
+        }
+
+        $this->assertTrue(Schema::hasColumn('no_timestamp_models', 'searchable'));
     }
 }

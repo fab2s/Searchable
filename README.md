@@ -246,6 +246,16 @@ Measured on a set of 520 French words, 1000 iterations each (PHP 8.4):
 
 PHP's native `metaphone()` is a C extension and unsurprisingly the fastest. Both French encoders are pure PHP with extensive regex-based rule sets, yet fast enough for typical use — encoding 1000 words takes under 50ms.
 
+## Automatic setup after migrations
+
+The package listens to Laravel's `MigrationsEnded` event and automatically runs `searchable:enable` after every successful `up` migration. This means:
+
+- After `php artisan migrate`, the searchable column and fulltext index are added to any new Searchable model.
+- After `php artisan migrate:fresh`, they are recreated along with the rest of your schema.
+- Rollbacks (`down`) and pretended migrations (`--pretend`) are ignored.
+
+This is fully automatic — no configuration needed. If you need to re-index existing records, run the command manually with `--index`.
+
 ## The Enable command
 
 ```shell
@@ -265,6 +275,34 @@ php artisan searchable:enable --root=app/Domain/Models
 The command detects the database driver and creates the appropriate index:
 - **MySQL**: `ALTER TABLE ... ADD FULLTEXT`
 - **PostgreSQL**: `CREATE INDEX ... USING GIN(to_tsvector(...))`
+
+### Adding Searchable to an existing model
+
+You can add the Searchable feature to a model with pre-existing data at any time. After implementing `SearchableInterface` and using the `Searchable` trait, run the enable command with `--index` to set up the column, create the fulltext index, and populate it for all existing records:
+
+```shell
+php artisan searchable:enable --model=App/Models/Contact --index
+```
+
+You can also run it without `--model` to process all Searchable models at once.
+
+### When to re-index
+
+The searchable column is automatically kept in sync on every Eloquent `save`. Manual re-indexing is only needed when:
+
+- **Adding Searchable to a model with existing data** — existing rows have no searchable content yet.
+- **Changing `$searchables`** — after adding or removing fields from the index, existing rows still contain the old content.
+- **Mass imports that bypass Eloquent** — raw SQL inserts, `DB::insert()`, or bulk imports that skip model events won't populate the searchable column.
+
+In all these cases, run:
+
+```shell
+# re-index a specific model
+php artisan searchable:enable --model=App/Models/Contact --index
+
+# or re-index all Searchable models
+php artisan searchable:enable --index
+```
 
 ## Contributing
 

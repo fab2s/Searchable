@@ -13,22 +13,14 @@ namespace fab2s\Searchable\Tests;
 
 use fab2s\Searchable\SearchableInterface;
 use fab2s\Searchable\Traits\Searchable;
-use Illuminate\Database\Eloquent\Builder;
 
-/**
- * @method static Builder<static> search(string|array $search, ?string $order = 'DESC')
- */
-class Model extends \Illuminate\Database\Eloquent\Model implements SearchableInterface
+class DefaultSizeModel extends \Illuminate\Database\Eloquent\Model implements SearchableInterface
 {
     use Searchable;
+    protected $table       = 'models';
     protected $guarded     = [];
     protected $searchables = [
         'field1',
         'field2',
     ];
-
-    public function getSearchableFieldDbSize(): int
-    {
-        return 500;
-    }
 }

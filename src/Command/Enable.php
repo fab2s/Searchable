@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -16,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Finder\Finder;
 
 class Enable extends Command
@@ -60,7 +63,7 @@ class Enable extends Command
             }
 
             $this->handleModel($this->model);
-            $this->output->success('Done');
+            $this->comment('Done');
 
             return self::SUCCESS;
         }
@@ -82,7 +85,7 @@ class Enable extends Command
         if (! $foundSome) {
             $this->warn('Could not find any model using Searchable trait in ' . $this->modelRootDir);
         } else {
-            $this->output->success('Done');
+            $this->comment('Done');
         }
 
         return self::SUCCESS;
@@ -94,7 +97,7 @@ class Enable extends Command
             return false;
         }
 
-        $this->output->info("Processing $fqn");
+        $this->info("Processing $fqn");
         $instance = new $fqn;
         $this->configureModel($instance);
 
@@ -115,7 +118,7 @@ class Enable extends Command
         $driver          = DB::connection($connection)->getDriverName();
 
         if (! Schema::connection($connection)->hasColumn($table, $searchableField)) {
-            $this->output->info("Adding $searchableField to $table");
+            $this->info("Adding $searchableField to $table");
             $after = null;
             if ($driver !== 'pgsql' && $model->usesTimestamps()) {
                 $columns = Schema::connection($connection)->getColumnListing($table);
@@ -123,24 +126,24 @@ class Enable extends Command
             }
 
             Schema::connection($connection)->table($table, function (Blueprint $table) use ($searchableField, $after, $dbType, $dbSize) {
-                $this->output->info("Using spec $dbType $dbSize");
+                $this->info("Using spec $dbType $dbSize");
                 if ($after) {
-                    $this->output->info("After $after");
+                    $this->info("After $after");
                     $table->$dbType($searchableField, $dbSize)->default('')->after($after);
                 } else {
                     $table->$dbType($searchableField, $dbSize)->default('');
                 }
             });
 
-            $this->output->info('Create full text index');
-            if ($driver === 'pgsql') {
+            $this->info('Create full text index');
+            if ($driver === 'pgsql') { // @codeCoverageIgnoreStart
                 $tsConfig = $model->getSearchableTsConfig();
                 DB::connection($connection)->statement("CREATE INDEX {$table}_{$searchableField}_fulltext ON {$table} USING GIN(to_tsvector('{$tsConfig}', {$searchableField}))");
-            } else {
+            } else { // @codeCoverageIgnoreEnd
                 DB::connection($connection)->statement("ALTER TABLE $table ADD FULLTEXT searchable($searchableField)");
             }
         } else {
-            $this->output->info("Found $searchableField in $table");
+            $this->info("Found $searchableField in $table");
         }
 
         return $this;
@@ -149,23 +152,25 @@ class Enable extends Command
     protected function index(Model&SearchableInterface $instance): void
     {
         $searchableField = $instance->getSearchableField();
-        $this->output->info('Indexing: ' . $instance::class);
-        $this->output->progressStart($instance->count()); // @phpstan-ignore method.notFound
+        $this->info('Indexing: ' . $instance::class);
+        $bar = $this->getOutput()->createProgressBar($instance->count()); // @phpstan-ignore method.notFound
+        $bar->setFormat(ProgressBar::FORMAT_VERY_VERBOSE);
         // @phpstan-ignore method.notFound
         $instance->chunkById(
             1000,
-            function (Collection $chunk) use ($searchableField) {
+            function (Collection $chunk) use ($bar, $searchableField) {
                 /** @var Collection<int, Model&SearchableInterface> $chunk */
                 $chunk->each(function (Model&SearchableInterface $model) use ($searchableField) {
                     $model->{$searchableField} = $model->getSearchableContent();
                     $model->save();
                 });
 
-                $this->output->progressAdvance($chunk->count());
+                $bar->advance($chunk->count());
             },
         );
 
-        $this->output->progressFinish();
+        $bar->finish();
+        $this->newLine();
     }
 
     protected function getModelFiles(): void

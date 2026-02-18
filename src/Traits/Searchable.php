@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -91,6 +93,7 @@ trait Searchable
         return $this->searchablePhonetic ?? false;
     }
 
+    /** @return Closure(string): string */
     public function getSearchablePhoneticClosure(): Closure
     {
         return isset($this->searchablePhoneticAlgorithm)

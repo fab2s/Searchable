@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -97,5 +99,10 @@ class ModelTest extends TestCase
     {
         $this->expectNotToPerformAssertions();
         Model::bootSearchable();
+    }
+
+    public function test_get_searchable_field_db_size_default(): void
+    {
+        $this->assertSame(500, (new DefaultSizeModel)->getSearchableFieldDbSize());
     }
 }

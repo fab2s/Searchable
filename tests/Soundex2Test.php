@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -65,5 +67,10 @@ class Soundex2Test extends TestCase
     public function test_whitespace_only(): void
     {
         $this->assertSame('', Soundex2::encode('   '));
+    }
+
+    public function test_empty_after_cleanup(): void
+    {
+        $this->assertSame('', Soundex2::encode('a'));
     }
 }

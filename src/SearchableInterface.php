@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -31,5 +33,6 @@ interface SearchableInterface
 
     public function getSearchablePhonetic(): bool;
 
+    /** @return Closure(string): string */
     public function getSearchablePhoneticClosure(): Closure;
 }

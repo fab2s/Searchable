@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of fab2s/searchable.
  * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
@@ -17,6 +19,7 @@ class TermParser
 {
     /**
      * @param string|array<int,string> $search
+     * @param ?Closure(string): string $phoneticAlgorithm
      */
     public static function parse(string|array $search, string $driver = 'mysql', bool $phonetic = false, ?Closure $phoneticAlgorithm = null): string
     {
@@ -56,12 +59,13 @@ class TermParser
         return (string) preg_replace('`\s{2,}`', ' ', Utf8::strtolower(Strings::singleWsIze($search, true)));
     }
 
+    /** @param Closure(string): string $encoder */
     public static function phoneticize(string $filtered, Closure $encoder): string
     {
         $words = array_filter(explode(' ', $filtered), fn (string $word) => $word !== '');
         $codes = [];
         foreach ($words as $word) {
-            $code = $encoder($word);
+            $code = (string) $encoder($word);
             if ($code !== '') {
                 $codes[] = strtolower($code);
             }
