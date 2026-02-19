@@ -31,7 +31,8 @@ class Enable extends Command
     protected $signature = 'searchable:enable
             {--root= : The place where to start looking for models, defaults to Laravel\'s app/Models}
             {--model= : To narrow to a single App/Model/ClassName by FQN}
-            {--index : To also index / re index}';
+            {--index : To also index / re index}
+            { --p|progress : to activate progress bar }';
 
     /**
      * The console command description.
@@ -42,6 +43,7 @@ class Enable extends Command
     protected string $modelRootDir;
     protected bool $index;
     protected string $model;
+    protected bool $hasProgress = false;
 
     /**
      * Execute the console command.
@@ -53,9 +55,14 @@ class Enable extends Command
         $this->modelRootDir = is_string($root) ? $root : app_path('Models');
         $model              = $this->option('model');
         $this->model        = is_string($model) ? $model : '';
+        $this->hasProgress  = (bool) $this->option('progress');
 
         if ($this->model) {
             $this->model = str_replace('/', '\\', $this->model);
+            if (! str_contains($this->model, '\\')) {
+                $this->model = '\\App\\Models\\' . $this->model;
+            }
+
             if (! class_exists($this->model)) {
                 $this->error('Provided Model FQN not found: ' . $this->model);
 
@@ -74,6 +81,7 @@ class Enable extends Command
             return self::FAILURE;
         }
 
+        $this->comment('Searchable start');
         $this->getModelFiles();
         $foundSome = false;
         foreach (get_declared_classes() as $fqn) {
@@ -118,7 +126,7 @@ class Enable extends Command
         $driver          = DB::connection($connection)->getDriverName();
 
         if (! Schema::connection($connection)->hasColumn($table, $searchableField)) {
-            $this->info("Adding $searchableField to $table");
+            $this->line("Adding $searchableField to $table");
             $after = null;
             if ($driver !== 'pgsql' && $model->usesTimestamps()) {
                 $columns = Schema::connection($connection)->getColumnListing($table);
@@ -126,16 +134,16 @@ class Enable extends Command
             }
 
             Schema::connection($connection)->table($table, function (Blueprint $table) use ($searchableField, $after, $dbType, $dbSize) {
-                $this->info("Using spec $dbType $dbSize");
+                $this->line("Using spec $dbType $dbSize");
                 if ($after) {
-                    $this->info("After $after");
+                    $this->line("After $after");
                     $table->$dbType($searchableField, $dbSize)->default('')->after($after);
                 } else {
                     $table->$dbType($searchableField, $dbSize)->default('');
                 }
             });
 
-            $this->info('Create full text index');
+            $this->line('Create full text index');
             if ($driver === 'pgsql') { // @codeCoverageIgnoreStart
                 $tsConfig = $model->getSearchableTsConfig();
                 DB::connection($connection)->statement("CREATE INDEX {$table}_{$searchableField}_fulltext ON {$table} USING GIN(to_tsvector('{$tsConfig}', {$searchableField}))");
@@ -143,7 +151,7 @@ class Enable extends Command
                 DB::connection($connection)->statement("ALTER TABLE $table ADD FULLTEXT searchable($searchableField)");
             }
         } else {
-            $this->info("Found $searchableField in $table");
+            $this->line("Found $searchableField in $table");
         }
 
         return $this;
@@ -152,24 +160,46 @@ class Enable extends Command
     protected function index(Model&SearchableInterface $instance): void
     {
         $searchableField = $instance->getSearchableField();
+        $table           = $instance->getTable();
+        $keyName         = $instance->getKeyName();
+        $connection      = $instance->getConnectionName();
+
         $this->info('Indexing: ' . $instance::class);
-        $bar = $this->getOutput()->createProgressBar($instance->count()); // @phpstan-ignore method.notFound
-        $bar->setFormat(ProgressBar::FORMAT_VERY_VERBOSE);
+        $bar = $this->hasProgress ? $this->getOutput()->createProgressBar($instance->count()) : null; // @phpstan-ignore method.notFound
+        $bar?->setFormat(ProgressBar::FORMAT_VERY_VERBOSE);
         // @phpstan-ignore method.notFound
         $instance->chunkById(
             1000,
-            function (Collection $chunk) use ($bar, $searchableField) {
+            function (Collection $chunk) use ($bar, $searchableField, $table, $keyName, $connection) {
                 /** @var Collection<int, Model&SearchableInterface> $chunk */
-                $chunk->each(function (Model&SearchableInterface $model) use ($searchableField) {
-                    $model->{$searchableField} = $model->getSearchableContent();
-                    $model->save();
-                });
+                $cases    = [];
+                $bindings = [];
+                $ids      = [];
 
-                $bar->advance($chunk->count());
+                foreach ($chunk as $model) {
+                    /** @var Model&SearchableInterface $model */
+                    $id         = $model->getKey();
+                    $ids[]      = $id;
+                    $cases[]    = 'WHEN ? THEN ?';
+                    $bindings[] = $id;
+                    $bindings[] = $model->getSearchableContent();
+                }
+
+                $idPlaceholders = implode(',', array_fill(0, count($ids), '?'));
+                $bindings       = array_merge($bindings, $ids);
+
+                DB::connection($connection)->update(
+                    "UPDATE {$table} SET {$searchableField} = CASE {$keyName} "
+                    . implode(' ', $cases)
+                    . " END WHERE {$keyName} IN ({$idPlaceholders})",
+                    $bindings,
+                );
+
+                $bar?->advance($chunk->count());
             },
         );
 
-        $bar->finish();
+        $bar?->finish();
         $this->newLine();
     }
 

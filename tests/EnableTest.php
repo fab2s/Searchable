@@ -72,6 +72,14 @@ class EnableTest extends TestCase
         ;
     }
 
+    public function test_command_with_short_model_name_prepends_app_models(): void
+    {
+        $this->artisan('searchable:enable', ['--model' => 'SomeModel'])
+            ->expectsOutput('Provided Model FQN not found: \\App\\Models\\SomeModel')
+            ->assertExitCode(1)
+        ;
+    }
+
     public function test_command_with_nonexistent_root(): void
     {
         $this->artisan('searchable:enable', ['--root' => '/nonexistent/path'])
@@ -112,6 +120,14 @@ class EnableTest extends TestCase
         }
 
         $this->assertTrue(Schema::hasColumn('models', 'searchable'));
+    }
+
+    public function test_saving_hook_populates_searchable_field(): void
+    {
+        $model = Model::create(['field1' => 'John', 'field2' => 'Doe']);
+
+        $this->assertSame('john doe', $model->searchable);
+        $this->assertSame('john doe', DB::table('models')->where('id', $model->id)->value('searchable'));
     }
 
     public function test_index(): void
