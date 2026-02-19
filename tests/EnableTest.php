@@ -124,7 +124,7 @@ class EnableTest extends TestCase
 
     public function test_saving_hook_populates_searchable_field(): void
     {
-        $model = Model::create(['field1' => 'John', 'field2' => 'Doe']);
+        $model = Model::create(['field1' => 'John', 'field2' => 'Doe']); // @phpstan-ignore staticMethod.notFound
 
         $this->assertSame('john doe', $model->searchable);
         $this->assertSame('john doe', DB::table('models')->where('id', $model->id)->value('searchable'));
