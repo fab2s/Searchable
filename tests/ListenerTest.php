@@ -34,7 +34,7 @@ class ListenerTest extends TestCase
     public function test_runs_enable_after_up_migration(): void
     {
         $mock = Mockery::mock();
-        $mock->shouldReceive('call')
+        $mock->shouldReceive('call') // @phpstan-ignore method.notFound
             ->once()
             ->with('searchable:enable', [], Mockery::type(ConsoleOutput::class))
         ;
@@ -46,7 +46,7 @@ class ListenerTest extends TestCase
     public function test_skips_on_down_migration(): void
     {
         $mock = Mockery::mock();
-        $mock->shouldReceive('call')->never();
+        $mock->shouldReceive('call')->never(); // @phpstan-ignore method.notFound
         Artisan::swap($mock);
 
         (new SearchableEnableAfterMigrate)->handle(new MigrationsEnded('down'));
@@ -59,7 +59,7 @@ class ListenerTest extends TestCase
         }
 
         $mock = Mockery::mock();
-        $mock->shouldReceive('call')->never();
+        $mock->shouldReceive('call')->never(); // @phpstan-ignore method.notFound
         Artisan::swap($mock);
 
         (new SearchableEnableAfterMigrate)->handle(new MigrationsEnded('up', ['pretend' => true]));
@@ -72,7 +72,7 @@ class ListenerTest extends TestCase
         }
 
         $mock = Mockery::mock();
-        $mock->shouldReceive('call')
+        $mock->shouldReceive('call') // @phpstan-ignore method.notFound
             ->once()
             ->with('searchable:enable', [], Mockery::type(ConsoleOutput::class))
         ;
@@ -88,7 +88,7 @@ class ListenerTest extends TestCase
         }
 
         $mock = Mockery::mock();
-        $mock->shouldReceive('call')
+        $mock->shouldReceive('call') // @phpstan-ignore method.notFound
             ->once()
             ->with('searchable:enable', [], Mockery::type(ConsoleOutput::class))
         ;
