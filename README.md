@@ -263,7 +263,7 @@ $search = new SearchQuery('DESC', 'searchable', 'french', phonetic: true, phonet
 
 ### Built-in French encoders
 
-Two French phonetic algorithms are included, ported from [Talisman](https://github.com/Yomguithereal/talisman) (MIT):
+Two French phonetic algorithms are included, optimized PHP ports from [Talisman](https://github.com/Yomguithereal/talisman) (MIT):
 
 | Class | Algorithm | Description |
 |-------|-----------|-------------|
@@ -330,7 +330,7 @@ You can add the Searchable feature to a model with pre-existing data at any time
 php artisan searchable:enable --model=App/Models/Contact --index
 ```
 
-You can also run it without `--model` to process all Searchable models at once.
+You can also run it without `--model` to process all Searchable models at once. Indexing is optimized with batch processing to handle large tables efficiently.
 
 ### When to re-index
 
