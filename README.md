@@ -1,143 +1,376 @@
 # Searchable
 
-Searchable models for [**Laravel**](https://laravel.com/) (The Awesome) based on Mysql FullText indexes.
+[![CI](https://github.com/fab2s/Searchable/actions/workflows/ci.yml/badge.svg)](https://github.com/fab2s/Searchable/actions/workflows/ci.yml)
+[![QA](https://github.com/fab2s/Searchable/actions/workflows/qa.yml/badge.svg)](https://github.com/fab2s/Searchable/actions/workflows/qa.yml)
+[![codecov](https://codecov.io/gh/fab2s/Searchable/graph/badge.svg?token=DKFT4Z9AML)](https://codecov.io/gh/fab2s/Searchable)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat)](https://phpstan.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-This package does not try to be smart, just KISS. It will allow you to make any filed of your model searchable by concatenating them into a new column indexed with a mysql FullText index.
+**Add fulltext search to your Eloquent models in minutes — no external services, no Scout driver, just your existing database.**
 
-> It requires mysql / mariadb and Laravel 9.x
+This package keeps things simple: it concatenates model fields into a single indexed column and uses native fulltext capabilities (`MATCH...AGAINST` on MySQL, `tsvector/tsquery` on PostgreSQL) for fast prefix-based search, ideal for autocomplete.
+
+## Why Searchable?
+
+If you need fast autocomplete or simple search and already run MySQL/MariaDB or PostgreSQL, you don't need a separate search engine.
+
+|  | Searchable | Laravel Scout + Driver |
+|---|---|---|
+| Infrastructure | Your existing database | External service (Algolia, Meilisearch, Typesense, ...) |
+| Setup | Add a trait, run one command | Install driver, configure credentials, manage process/service |
+| Sync | Automatic on Eloquent `save` | Queue workers, manual imports |
+| Query integration | Standard Eloquent scopes & builder — composes with `where`, `join`, `orderBy`, etc. | Separate `::search()` API with limited query builder support |
+| Phonetic matching | Built-in, pluggable algorithms (also provides typo tolerance) | Depends on the external service |
+| Scalability | Performs well even with millions of rows thanks to single-column native fulltext indexes | Designed for very large-scale, multi-field search |
+| Best for | Autocomplete, name/title/email search, up to millions of rows | Multi-field search, weighted ranking, facets, advanced typo tolerance |
+
+Searchable is not a replacement for a dedicated search engine — it's a lightweight alternative for the many cases where one isn't needed. The single-column approach is what makes it fast: native fulltext indexes on one column scale well, whereas indexing many columns separately (especially on MySQL) is where dedicated engines pull ahead.
+
+## Requirements
+
+- PHP 8.1+
+- Laravel 10.x / 11.x / 12.x
+- MySQL / MariaDB or PostgreSQL
+- `ext-intl` PHP extension
 
 ## Installation
 
-`Searchable` can be installed using composer:
-
 ```shell
-composer require "fab2s/searchable"
+composer require fab2s/searchable
 ```
 
-## Usage
+The service provider is auto-discovered.
 
-To start using `Searchable` on a specific `model`, just `use`  the `Searchable` trait and setup `$searchables`:
+## Quick start
+
+Implement `SearchableInterface` on your model, use the `Searchable` trait, and list the fields to index:
 
 ```php
-class MyModel extends Model
+use fab2s\Searchable\SearchableInterface;
+use fab2s\Searchable\Traits\Searchable;
+
+class Contact extends Model implements SearchableInterface
 {
     use Searchable;
-    
-     /**
-     * @var string[]
-     */
+
     protected $searchables = [
-        'field1',
-        'field2',
-        // ...
-        'fieldN',
+        'first_name',
+        'last_name',
+        'email',
     ];
 }
 ```
 
-By default, `field1` to `fieldN` will be concatenated and stored into the default `SearchQuery::SEARCHABLE_FIELD` field added to the model by the `Enable` command.
+Then run the artisan command to add the column and fulltext index:
 
-By default, this searchable field will be of type `VARCHAR(255)`, but you can customize it at will with any type and length supporting a FullText index by just overriding the `Searchable` trait method in your model:
+```shell
+php artisan searchable:enable
+```
 
-````php
-    /**
-     * @return string
-     */
-    public function getSearchableField(): string
+That's it. The `searchable` column is automatically populated on every save.
+
+> **Choosing fields wisely:** The quality of matching depends directly on which fields you index. This package is designed for fast, simple autocomplete — not complex full-text search. Keep `$searchables` focused on the few fields users actually type into a search box (names, titles, emails). Adding large or numerous fields dilutes relevance and increases storage. If you need weighted fields, facets, or advanced ranking, consider a dedicated search engine instead.
+
+## Searching
+
+The trait provides a `search` scope that handles everything automatically:
+
+```php
+$results = Contact::search($request->input('q'))->get();
+```
+
+It composes with other query builder methods:
+
+```php
+$results = Contact::search('john')
+    ->where('active', true)
+    ->limit(10)
+    ->get();
+```
+
+Results are ordered by relevance (DESC) by default. Pass `null` to disable:
+
+```php
+$results = Contact::search('john', null)->latest()->get();
+```
+
+The driver is detected automatically from the query's connection. The scope picks up the model's `tsConfig` and `phonetic` settings.
+
+> For IDE autocompletion, add a `@method` annotation to your model:
+> ```php
+> /**
+>  * @method static Builder<static> search(string|array $search, ?string $order = 'DESC')
+>  */
+> class Contact extends Model implements SearchableInterface
+> ```
+
+### Empty search terms
+
+When the search input is empty or contains only operators/whitespace, the `search` scope is a no-op — no `WHERE` or `ORDER BY` clause is added. This means you can safely pass user input without checking for empty strings:
+
+```php
+// Safe — returns all contacts (unfiltered) when $q is empty
+$results = Contact::search($request->input('q', ''))
+    ->where('active', true)
+    ->get();
+```
+
+### Advanced usage with SearchQuery
+
+For more control (table aliases in joins, custom field name), use `SearchQuery` directly:
+
+```php
+use fab2s\Searchable\SearchQuery;
+
+$search = new SearchQuery('DESC', 'searchable', 'english', phonetic: true);
+$query  = Contact::query();
+
+$search->addMatch($query, $request->input('q'), 'contacts');
+
+$results = $query->get();
+```
+
+This is particularly useful when searching across joined tables. The third argument to `addMatch` is a table alias that prefixes the searchable column, preventing ambiguity:
+
+```php
+$search = new SearchQuery;
+$query  = Contact::query()
+    ->join('companies', 'contacts.company_id', '=', 'companies.id')
+    ->select('contacts.*');
+
+// search in contacts
+$search->addMatch($query, $request->input('q'), 'contacts');
+
+// you could also search in companies with a second SearchQuery instance
+// (new SearchQuery)->addMatch($query, $request->input('q'), 'companies');
+
+$results = $query->get();
+```
+
+## Configuration
+
+Every option can be set by declaring a property on your model. The trait picks them up automatically and falls back to sensible defaults when omitted:
+
+| Property                | Type           | Default         | Description                              |
+|-------------------------|----------------|-----------------|------------------------------------------|
+| `$searchableField`      | `string`       | `'searchable'`  | Column name for the searchable content   |
+| `$searchableFieldDbType`| `string`       | `'string'`      | Migration column type (`string`, `text`)  |
+| `$searchableFieldDbSize`| `int`          | `500`           | Column size (applies to `string` type)   |
+| `$searchables`          | `array<string>`| `[]`            | Model fields to index                    |
+| `$searchableTsConfig`   | `string`       | `'english'`     | PostgreSQL text search configuration     |
+| `$searchablePhonetic`   | `bool`         | `false`         | Enable phonetic matching                 |
+| `$searchablePhoneticAlgorithm` | `class-string<PhoneticInterface>` | — (metaphone) | Custom phonetic encoder class |
+
+```php
+class Contact extends Model implements SearchableInterface
+{
+    use Searchable;
+
+    protected array $searchables = ['first_name', 'last_name', 'email'];
+    protected string $searchableTsConfig = 'french';
+    protected bool $searchablePhonetic = true;
+    protected int $searchableFieldDbSize = 1000;
+}
+```
+
+Each property has a corresponding getter method (`getSearchableField()`, `getSearchableFieldDbType()`, etc.) defined in `SearchableInterface`. You can override those methods instead if you need computed values.
+
+### Custom content
+
+Override `getSearchableContent()` to control what gets indexed. The `$additional` parameter lets you inject extra data (decrypted fields, computed values, etc.):
+
+```php
+public function getSearchableContent(string $additional = ''): string
+{
+    $extra = implode(' ', [
+        $this->decrypt('phone'),
+        $this->some_computed_value,
+    ]);
+
+    return parent::getSearchableContent($extra);
+}
+```
+
+### PostgreSQL text search configuration
+
+By default, PostgreSQL uses the `english` text search configuration. Set `$searchableTsConfig` to change it:
+
+```php
+protected string $searchableTsConfig = 'french';
+```
+
+The `search` scope picks this up automatically. When using `SearchQuery` directly, pass the same value:
+
+```php
+$search = new SearchQuery('DESC', 'searchable', 'french');
+```
+
+### Phonetic matching
+
+Enable phonetic matching to find results despite spelling variations (eg. "jon" matches "john", "smyth" matches "smith"). This uses PHP's `metaphone()` to append phonetic codes to the same searchable field — no extra column or extension needed.
+
+```php
+protected bool $searchablePhonetic = true;
+```
+
+That's all — both storage and the `search` scope handle it automatically. Stored content becomes `john smith jn sm0`, and a search for `jon` produces the term `jn` which matches.
+
+When using `SearchQuery` directly, pass the phonetic flag:
+
+```php
+$search = new SearchQuery('DESC', 'searchable', 'english', phonetic: true);
+```
+
+### Custom phonetic algorithm
+
+The default `metaphone()` works well for English. For other languages, set `$searchablePhoneticAlgorithm` to any class implementing `PhoneticInterface`:
+
+```php
+use fab2s\Searchable\Phonetic\PhoneticInterface;
+
+class MyEncoder implements PhoneticInterface
+{
+    public static function encode(string $word): string
     {
-        return SearchQuery::SEARCHABLE_FIELD; // searchable
+        // your encoding logic
     }
+}
+```
 
-    /**
-     * @return string any migration method such as string, text etc ...
-     */
-    public function getSearchableFieldDbType(): string
-    {
-        return 'string';
-    }
+Then reference it on your model:
 
-    /**
-     * @return int
-     */
-    public function getSearchableFieldDbSize(): int
-    {
-        return 255;
-    }
+```php
+use fab2s\Searchable\Phonetic\Phonetic;
 
-````
+class Contact extends Model implements SearchableInterface
+{
+    use Searchable;
 
-You can customise concatenation as well overriding:
+    protected array $searchables = ['first_name', 'last_name'];
+    protected bool $searchablePhonetic = true;
+    protected string $searchablePhoneticAlgorithm = Phonetic::class;
+}
+```
 
-````php
-    /**
-     * @param string $additional for case where this method is overridden in users
-     *
-     * @return string
-     */
-    public function getSearchableContent(string $additional = ''): string
-    {
-        return TermParser::prepareSearchable(array_map(function ($field) {
-            return $this->$field;
-        }, $this->getSearchables()), $additional);
-    }
-````
+The trait resolves the class to a closure internally — no method override needed.
 
-The `$additional` parameter can be used to preprocess model data if needed, can be handy to encrypt/decrypt or anonymize for example:
+When using `SearchQuery` directly, pass the encoder as a closure:
 
-````php
-    /**
-     * @return string
-     */
-    public function getSearchableContent(): string
-    {
-        $additional = [
-            $this->decrypt('additional_field1'),
-            0 . substr((string) $this->decrypt('phone'), 3, 6), // will allow for partial matches
-        ];
+```php
+$search = new SearchQuery('DESC', 'searchable', 'french', phonetic: true, phoneticAlgorithm: Phonetic::encode(...));
+```
 
-        return $this->getSearchableContentTrait(implode(' ', $additional));
-    }
-````
+### Built-in French encoders
 
-Once you have configured your model(s), you can use the `Enable` command to add the `searchable` field to your models and / or index them:
+Two French phonetic algorithms are included, optimized PHP ports from [Talisman](https://github.com/Yomguithereal/talisman) (MIT):
 
-````shell
-$ php artisan searchable:enable --help
-Description:
-  Enable searchable for your models
+| Class | Algorithm | Description |
+|-------|-----------|-------------|
+| `Phonetic` | [Phonetic Français](http://www.roudoudou.com/phonetic.php) | Comprehensive French phonetic algorithm by Edouard Berge. Handles ligatures, silent letters, nasal vowels, and many French-specific spelling rules. |
+| `Soundex2` | [Soundex2](http://sqlpro.developpez.com/cours/soundex/) | French adaptation of Soundex. Simpler and faster than `Phonetic`, produces 4-character codes. |
 
-Usage:
-  searchable:enable [options]
+Both implement `PhoneticInterface` and handle Unicode normalization (accents, ligatures like œ and æ) internally.
 
-Options:
-      --root[=ROOT]     The place where to start looking for models, defaults to Laravel's app/Models
-      --index           To also index / re index
-  -h, --help            Display help for the given command. When no command is given display help for the list command
-  -q, --quiet           Do not output any message
-  -V, --version         Display this application version
-      --ansi|--no-ansi  Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction  Do not ask any interactive question
-      --env[=ENV]       The environment the command should run under
-  -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
-````
+```php
+use fab2s\Searchable\Phonetic\Phonetic;
+use fab2s\Searchable\Phonetic\Soundex2;
 
-## Stopwords
+Phonetic::encode('jean');   // 'JAN'
+Soundex2::encode('dupont'); // 'DIPN'
+```
 
-`Searchable` comes with an english and french stop words files which you can use to reduce FullText indexing by ignoring words listed in [these files](./src/stopwords).
+### Phonetic encoder benchmarks
 
-The `StopWords` command can be used to populate a `stopwords` table with these words:
+Measured on a set of 520 French words, 1000 iterations each (PHP 8.4):
 
-````shell
-php artisan searchable:stopwords
-````
+| Encoder    | Per word | Throughput |
+|------------|----------|------------|
+| metaphone  | ~2 µs   | ~500k/s    |
+| Soundex2   | ~35 µs  | ~28k/s     |
+| Phonetic   | ~51 µs  | ~20k/s     |
 
-The db server configuration must be configured as demonstrated in [innodb_full_text.cnf](./src/innodb_full_text.cnf) for these words to effectively be excluded from indexing.
+PHP's native `metaphone()` is a C extension and unsurprisingly the fastest. Both French encoders are pure PHP with extensive regex-based rule sets, yet fast enough for typical use — encoding 1000 words takes under 50ms.
 
+## Automatic setup after migrations
+
+The package listens to Laravel's `MigrationsEnded` event and automatically runs `searchable:enable` after every successful `up` migration. This means:
+
+- After `php artisan migrate`, the searchable column and fulltext index are added to any new Searchable model.
+- After `php artisan migrate:fresh`, they are recreated along with the rest of your schema.
+- Rollbacks (`down`) and pretended migrations (`--pretend`) are ignored.
+
+This is fully automatic — no configuration needed. If you need to re-index existing records, run the command manually with `--index`.
+
+## The Enable command
+
+```shell
+# Add searchable column + index to all models using the Searchable trait
+php artisan searchable:enable
+
+# Target a specific model
+php artisan searchable:enable --model=App/Models/Contact
+
+# Also (re)index existing records
+php artisan searchable:enable --model=App/Models/Contact --index
+
+# Scan a custom directory for models
+php artisan searchable:enable --root=app/Domain/Models
+```
+
+The command detects the database driver and creates the appropriate index:
+- **MySQL**: `ALTER TABLE ... ADD FULLTEXT`
+- **PostgreSQL**: `CREATE INDEX ... USING GIN(to_tsvector(...))`
+
+### Adding Searchable to an existing model
+
+You can add the Searchable feature to a model with pre-existing data at any time. After implementing `SearchableInterface` and using the `Searchable` trait, run the enable command with `--index` to set up the column, create the fulltext index, and populate it for all existing records:
+
+```shell
+php artisan searchable:enable --model=App/Models/Contact --index
+```
+
+You can also run it without `--model` to process all Searchable models at once. Indexing is optimized with batch processing to handle large tables efficiently.
+
+### When to re-index
+
+The searchable column is automatically kept in sync on every Eloquent `save`. Manual re-indexing is only needed when:
+
+- **Adding Searchable to a model with existing data** — existing rows have no searchable content yet.
+- **Changing `$searchables`** — after adding or removing fields from the index, existing rows still contain the old content.
+- **Mass imports that bypass Eloquent** — raw SQL inserts, `DB::insert()`, or bulk imports that skip model events won't populate the searchable column.
+
+In all these cases, run:
+
+```shell
+# re-index a specific model
+php artisan searchable:enable --model=App/Models/Contact --index
+
+# or re-index all Searchable models
+php artisan searchable:enable --index
+```
 
 ## Contributing
 
-Contributions are welcome, do not hesitate to open issues and submit pull requests.
+Contributions are welcome. Feel free to open issues and submit pull requests.
+
+```shell
+# fix code style
+composer fix
+
+# run tests
+composer test
+
+# run tests with coverage
+composer cov
+
+# static analysis (src, level 9)
+composer stan
+
+# static analysis (tests, level 5)
+composer stan-tests
+```
 
 ## License
 
-`Searchable` is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT).
+`Searchable` is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

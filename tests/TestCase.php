@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Searchable
- *     (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
+ * This file is part of fab2s/searchable.
+ * (c) Fabrice de Stefanis / https://github.com/fab2s/Searchable
  * This source file is licensed under the MIT license which you will
  * find in the LICENSE file or at https://opensource.org/licenses/MIT
  */
@@ -23,14 +25,14 @@ class TestCase extends \Orchestra\Testbench\TestCase
      *
      * @return array<int, class-string<ServiceProvider>>
      */
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
         return [
             SearchableServiceProvider::class,
         ];
     }
 
-    protected function getEnvironmentSetUp($app)
+    protected function getEnvironmentSetUp($app): void
     {
         // make sure, our .env file is loaded
         $app->useEnvironmentPath(dirname(__DIR__));
