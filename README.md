@@ -7,15 +7,31 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Fulltext search for [Laravel](https://laravel.com/) Eloquent models. Supports **MySQL** and **PostgreSQL**.
+**Add fulltext search to your Eloquent models in minutes — no external services, no Scout driver, just your existing database.**
 
 This package keeps things simple: it concatenates model fields into a single indexed column and uses native fulltext capabilities (`MATCH...AGAINST` on MySQL, `tsvector/tsquery` on PostgreSQL) for fast prefix-based search, ideal for autocomplete.
+
+## Why Searchable?
+
+If you need fast autocomplete or simple search and already run MySQL/MariaDB or PostgreSQL, you don't need a separate search engine.
+
+|  | Searchable | Laravel Scout + Driver |
+|---|---|---|
+| Infrastructure | Your existing database | External service (Algolia, Meilisearch, Typesense, ...) |
+| Setup | Add a trait, run one command | Install driver, configure credentials, manage process/service |
+| Sync | Automatic on Eloquent `save` | Queue workers, manual imports |
+| Query integration | Standard Eloquent scopes & builder — composes with `where`, `join`, `orderBy`, etc. | Separate `::search()` API with limited query builder support |
+| Phonetic matching | Built-in, pluggable algorithms | Depends on the external service |
+| Best for | Autocomplete, name/title search, moderate datasets | Large-scale search, weighted fields, facets, typo tolerance |
+
+Searchable is not a replacement for a dedicated search engine — it's a lightweight alternative for the many cases where one isn't needed.
 
 ## Requirements
 
 - PHP 8.1+
 - Laravel 10.x / 11.x / 12.x
 - MySQL / MariaDB or PostgreSQL
+- `ext-intl` PHP extension
 
 ## Installation
 
@@ -88,6 +104,17 @@ The driver is detected automatically from the query's connection. The scope pick
 > class Contact extends Model implements SearchableInterface
 > ```
 
+### Empty search terms
+
+When the search input is empty or contains only operators/whitespace, the `search` scope is a no-op — no `WHERE` or `ORDER BY` clause is added. This means you can safely pass user input without checking for empty strings:
+
+```php
+// Safe — returns all contacts (unfiltered) when $q is empty
+$results = Contact::search($request->input('q', ''))
+    ->where('active', true)
+    ->get();
+```
+
 ### Advanced usage with SearchQuery
 
 For more control (table aliases in joins, custom field name), use `SearchQuery` directly:
@@ -99,6 +126,23 @@ $search = new SearchQuery('DESC', 'searchable', 'english', phonetic: true);
 $query  = Contact::query();
 
 $search->addMatch($query, $request->input('q'), 'contacts');
+
+$results = $query->get();
+```
+
+This is particularly useful when searching across joined tables. The third argument to `addMatch` is a table alias that prefixes the searchable column, preventing ambiguity:
+
+```php
+$search = new SearchQuery;
+$query  = Contact::query()
+    ->join('companies', 'contacts.company_id', '=', 'companies.id')
+    ->select('contacts.*');
+
+// search in contacts
+$search->addMatch($query, $request->input('q'), 'contacts');
+
+// you could also search in companies with a second SearchQuery instance
+// (new SearchQuery)->addMatch($query, $request->input('q'), 'companies');
 
 $results = $query->get();
 ```

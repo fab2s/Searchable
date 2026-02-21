@@ -12,12 +12,15 @@
     "keywords": [
         "Laravel",
         "Searchable",
+        "eloquent",
+        "search",
+        "fulltext-search",
+        "fulltext-index",
         "mysql",
         "pgsql",
         "mariaDb",
-        "FullText",
         "phonetic",
-        "model"
+        "autocomplete"
     ],
     "license": [
         "MIT"

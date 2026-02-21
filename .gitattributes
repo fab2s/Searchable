@@ -1,3 +1,13 @@
+# Distribution archive exclusions
+/tests              export-ignore
+/.github            export-ignore
+/bench.php          export-ignore
+phpstan*.neon       export-ignore
+phpunit.xml         export-ignore
+pint.json           export-ignore
+.env.example        export-ignore
+CHANGELOG.md        export-ignore
+
 # laravel default
 *.css linguist-vendored
 *.less linguist-vendored
