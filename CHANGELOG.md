@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Searchable` trait and `SearchableInterface` for easy model integration
 - `SearchQuery` class for advanced usage (joins, table aliases, custom field names)
 - `TermParser` for driver-aware term parsing and content preparation
-- Phonetic matching support with pluggable algorithms via `PhoneticInterface`
+- Phonetic matching support with pluggable algorithms via `PhoneticInterface` — also provides typo tolerance by matching phonetically similar inputs
 - Built-in French phonetic encoders: `Phonetic` (Phonetic Francais) and `Soundex2` — optimized PHP ports from [Talisman](https://github.com/Yomguithereal/talisman)
 - `searchable:enable` artisan command to add columns, fulltext indexes, and (re)index data with optimized batch processing
 - Automatic setup after migrations via `MigrationsEnded` event listener

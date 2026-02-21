@@ -21,10 +21,11 @@ If you need fast autocomplete or simple search and already run MySQL/MariaDB or 
 | Setup | Add a trait, run one command | Install driver, configure credentials, manage process/service |
 | Sync | Automatic on Eloquent `save` | Queue workers, manual imports |
 | Query integration | Standard Eloquent scopes & builder — composes with `where`, `join`, `orderBy`, etc. | Separate `::search()` API with limited query builder support |
-| Phonetic matching | Built-in, pluggable algorithms | Depends on the external service |
-| Best for | Autocomplete, name/title search, moderate datasets | Large-scale search, weighted fields, facets, typo tolerance |
+| Phonetic matching | Built-in, pluggable algorithms (also provides typo tolerance) | Depends on the external service |
+| Scalability | Performs well even with millions of rows thanks to single-column native fulltext indexes | Designed for very large-scale, multi-field search |
+| Best for | Autocomplete, name/title/email search, up to millions of rows | Multi-field search, weighted ranking, facets, advanced typo tolerance |
 
-Searchable is not a replacement for a dedicated search engine — it's a lightweight alternative for the many cases where one isn't needed.
+Searchable is not a replacement for a dedicated search engine — it's a lightweight alternative for the many cases where one isn't needed. The single-column approach is what makes it fast: native fulltext indexes on one column scale well, whereas indexing many columns separately (especially on MySQL) is where dedicated engines pull ahead.
 
 ## Requirements
 
