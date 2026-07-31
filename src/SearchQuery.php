@@ -52,19 +52,19 @@ class SearchQuery
         $order       = $order ? $this->getOrder($order) : $this->order;
 
         if ($driver === 'pgsql') {
-            $query->whereRaw("to_tsvector('{$this->tsConfig}', {$searchField}) @@ to_tsquery('{$this->tsConfig}', ?)", [$terms]);
+            $query->whereRaw("to_tsvector('{$this->tsConfig}', {$searchField}) @@ to_tsquery('{$this->tsConfig}', ?)", [$terms]); // @phpstan-ignore argument.type
 
             if ($order) {
-                $query->orderByRaw("ts_rank(to_tsvector('{$this->tsConfig}', {$searchField}), to_tsquery('{$this->tsConfig}', ?)) {$order}", [$terms]);
+                $query->orderByRaw("ts_rank(to_tsvector('{$this->tsConfig}', {$searchField}), to_tsquery('{$this->tsConfig}', ?)) {$order}", [$terms]); // @phpstan-ignore argument.type
             }
 
             return;
         }
 
-        $query->whereRaw('MATCH (' . $searchField . ') AGAINST (? IN BOOLEAN MODE)', [$terms]);
+        $query->whereRaw('MATCH (' . $searchField . ') AGAINST (? IN BOOLEAN MODE)', [$terms]); // @phpstan-ignore argument.type
 
         if ($order) {
-            $query->orderByRaw('(MATCH (' . $searchField . ') AGAINST (? IN BOOLEAN MODE)) ' . $order, [$terms]);
+            $query->orderByRaw('(MATCH (' . $searchField . ') AGAINST (? IN BOOLEAN MODE)) ' . $order, [$terms]); // @phpstan-ignore argument.type
         }
     }
 

@@ -29,7 +29,7 @@ Searchable is not a replacement for a dedicated search engine — it's a lightwe
 
 ## Requirements
 
-- PHP 8.1+
+- PHP 8.2+
 - Laravel 10.x / 11.x / 12.x
 - MySQL / MariaDB or PostgreSQL
 - `ext-intl` PHP extension

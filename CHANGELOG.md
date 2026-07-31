@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-31
+
+### Changed
+
+- Requires PHP 8.2+ (PHP 8.1 is EOL, pin `1.0.*` to stay on it)
+- Tested against PHP 8.5, CI matrix is now PHP 8.2 to 8.5 against Orchestra 9, 10 and 11
+- `phpunit/phpunit` `^11.0|^12.0|^13.0`, `orchestra/testbench` `^9.0|^10.0|^11.0`
+
 ## [1.0.0] - 2026-02-21
 
 ### Added
