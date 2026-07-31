@@ -13,8 +13,9 @@ namespace fab2s\Searchable\Tests;
 
 use fab2s\Searchable\SearchableInterface;
 use fab2s\Searchable\Traits\Searchable;
+use Illuminate\Database\Eloquent\Model;
 
-class NoTimestampModel extends \Illuminate\Database\Eloquent\Model implements SearchableInterface
+class NoTimestampModel extends Model implements SearchableInterface
 {
     use Searchable;
     protected $table       = 'no_timestamp_models';

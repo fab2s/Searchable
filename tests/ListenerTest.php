@@ -34,8 +34,8 @@ class ListenerTest extends TestCase
     public function test_runs_enable_after_up_migration(): void
     {
         $mock = Mockery::mock();
-        $mock->shouldReceive('call') // @phpstan-ignore method.notFound
-            ->once()
+        $mock->shouldReceive('call')
+            ->once() // @phpstan-ignore method.notFound
             ->with('searchable:enable', [], Mockery::type(ConsoleOutput::class))
         ;
         Artisan::swap($mock);
@@ -72,8 +72,8 @@ class ListenerTest extends TestCase
         }
 
         $mock = Mockery::mock();
-        $mock->shouldReceive('call') // @phpstan-ignore method.notFound
-            ->once()
+        $mock->shouldReceive('call')
+            ->once() // @phpstan-ignore method.notFound
             ->with('searchable:enable', [], Mockery::type(ConsoleOutput::class))
         ;
         Artisan::swap($mock);
@@ -88,8 +88,8 @@ class ListenerTest extends TestCase
         }
 
         $mock = Mockery::mock();
-        $mock->shouldReceive('call') // @phpstan-ignore method.notFound
-            ->once()
+        $mock->shouldReceive('call')
+            ->once() // @phpstan-ignore method.notFound
             ->with('searchable:enable', [], Mockery::type(ConsoleOutput::class))
         ;
         Artisan::swap($mock);
