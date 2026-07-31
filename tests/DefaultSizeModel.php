@@ -13,8 +13,9 @@ namespace fab2s\Searchable\Tests;
 
 use fab2s\Searchable\SearchableInterface;
 use fab2s\Searchable\Traits\Searchable;
+use Illuminate\Database\Eloquent\Model;
 
-class DefaultSizeModel extends \Illuminate\Database\Eloquent\Model implements SearchableInterface
+class DefaultSizeModel extends Model implements SearchableInterface
 {
     use Searchable;
     protected $table       = 'models';
